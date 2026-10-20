@@ -1,0 +1,66 @@
+# --- Local secrets & env (never commit) ---
+.env
+.env.*
+!.env.example
+credentials/
+credentials.json
+
+# Signing & keys
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+
+# --- IDE / agent (local only; not shared via git) ---
+.cursor/
+.claude/
+.impeccable/
+.imprecable/
+AGENTS.md
+CLAUDE.md
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --- Dependencies & build output ---
+node_modules/
+dist/
+web-build/
+*.tsbuildinfo
+
+# --- Expo / Metro ---
+.expo/
+expo-env.d.ts
+.metro-health-check*
+.expo-export-test/
+.expo-export-test2/
+.expo-export-audit/
+.expo-export-audit-prod/
+.expo-sentry-test/
+.expo-tmp-bundle/
+
+# Generated native projects — not needed in git (EAS Build / `npx expo prebuild`)
+/android/
+/ios/
+.kotlin/
+*.orig.*
+
+# --- Local docs, scripts & QA (not pushed) ---
+docs/
+scripts/
+store/
+app_old.json
+*recovery-codes*
+*recovery-codes.txt
+
+# --- OS & debug logs ---
+.DS_Store
+Thumbs.db
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+coverage/

@@ -1,0 +1,62 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "copyright": "2026 AFOMA Marketplace",
+    "categories": ["SHOPPING", "LIFESTYLE"],
+    "advisory": {
+      "alcoholTobaccoOrDrugUseOrReferences": "NONE",
+      "contests": "NONE",
+      "gamblingSimulated": "NONE",
+      "horrorOrFearThemes": "NONE",
+      "matureOrSuggestiveThemes": "NONE",
+      "medicalOrTreatmentInformation": "NONE",
+      "profanityOrCrudeHumor": "NONE",
+      "sexualContentGraphicAndNudity": "NONE",
+      "sexualContentOrNudity": "NONE",
+      "violenceCartoonOrFantasy": "NONE",
+      "violenceRealistic": "NONE",
+      "violenceRealisticProlongedGraphicOrSadistic": "NONE",
+      "gambling": false,
+      "unrestrictedWebAccess": true,
+      "kidsAgeBand": null,
+      "ageRatingOverride": "NONE",
+      "koreaAgeRatingOverride": "NONE"
+    },
+    "info": {
+      "en-US": {
+        "title": "AFOMA Marketplace",
+        "subtitle": "Handmade & ethical shopping",
+        "promoText": "Shop handmade goods from artisans worldwide. Browse, checkout securely, track orders, and manage your account from your phone.",
+        "description": "AFOMA Marketplace connects you with independent makers and ethical brands—especially artisans in emerging markets. Discover authentic handmade products, support creative entrepreneurs, and shop with confidence.\n\nSHOP\n• Home, categories, and search\n• Product and service listings with photos, variations, and reviews\n• Seller shops and featured collections\n\nCHECKOUT & ORDERS\n• Cart, shipping quotes, and promo codes\n• Secure payments (card, PayPal, and regional options where enabled)\n• Order history and delivery details\n\nYOUR ACCOUNT\n• Email sign-in with one-time passcode verification\n• Saved addresses, notifications, and referral earnings\n• Buyer–seller messages with report and block tools\n• Delete your account in-app (Account → Account details)\n\nFOR SELLERS\n• Seller dashboard, listings, orders, shipping, coupons, and earnings\n• Create and manage products and services (including photo uploads)\n\nPrivacy policy: https://afomamarketplace.com/privacy-policy\nTerms: https://afomamarketplace.com/terms-conditions\nSupport: contact@afoma.io",
+        "keywords": [
+          "handmade",
+          "marketplace",
+          "artisan",
+          "ethical",
+          "shop",
+          "gifts",
+          "craft",
+          "small business",
+          "fair trade",
+          "unique"
+        ],
+        "releaseNotes": "Welcome to AFOMA Marketplace on mobile—browse, checkout, and manage your account with the same trusted marketplace experience as the web.",
+        "marketingUrl": "https://afomamarketplace.com/",
+        "supportUrl": "https://afomamarketplace.com/",
+        "privacyPolicyUrl": "https://afomamarketplace.com/privacy-policy",
+        "privacyChoicesUrl": "https://afomamarketplace.com/privacy-policy#account-deletion"
+      }
+    },
+    "release": {
+      "automaticRelease": true
+    },
+    "review": {
+      "firstName": "AFOMA",
+      "lastName": "Support",
+      "email": "contact@afoma.io",
+      "phone": "+13652936113",
+      "demoRequired": true,
+      "notes": "AFOMA Marketplace review guide. Support: +13652936113, contact@afoma.io (monitored during review). SIGN-IN: email + OTP only—no password. Put demo buyer email in Sign-In Required; OTP is emailed to that address. BUYER: Account → sign in → Home/Categories → physical (Standard) product → Add to cart → Checkout → Payment (sandbox/test only) → Account → My Orders. MESSAGES: Account → Messages → report (flag) / block (ban icon) in thread header. SELLER: sign out → seller demo email + OTP → Account → Seller → Dashboard, Listing Management (skip membership payment unless test mode). DELETE ACCOUNT (disposable test user only): Account → Account details → Delete account. Full steps, no secrets in repo: store/REVIEWER_ACCESS.template.md"
+    }
+  }
+}

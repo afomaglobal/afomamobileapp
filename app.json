@@ -1,0 +1,87 @@
+{
+  "expo": {
+    "name": "AFOMA",
+    "slug": "afomamobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFF7ED"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.afomamarketplace.afomamobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFF7ED"
+      },
+      "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "pan",
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.POST_NOTIFICATIONS"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.afomamarketplace.afomamobile",
+      "googleServicesFile": "./google-services.json"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow AFOMA to access your photos to add product images.",
+          "cameraPermission": "Allow AFOMA to use the camera to take product photos."
+        }
+      ],
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.afoma",
+          "enableGooglePay": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#EA580C",
+          "defaultChannel": "chat-messages"
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      "@sentry/react-native"
+    ],
+    "scheme": "afoma",
+    "extra": {
+      "eas": {
+        "projectId": "5335a470-b0b8-44b9-9a46-848860304d66"
+      }
+    },
+    "owner": "afoma-marketplace-1",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/5335a470-b0b8-44b9-9a46-848860304d66"
+    }
+  }
+}
