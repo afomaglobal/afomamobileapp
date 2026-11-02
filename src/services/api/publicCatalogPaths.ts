@@ -14,6 +14,7 @@ const PUBLIC_CATALOG_GET_PREFIXES = [
   '/settings/public',
   '/settings/type/terms-conditions',
   '/commission/payout-access',
+  '/seller-membership/plans',
 ];
 
 function pathOnly(url: string | undefined): string {
@@ -41,6 +42,7 @@ export function isPublicCatalogGetPath(url: string | undefined): boolean {
 /** Auth/signup POSTs that must work before a session exists (mirrors backend apiAccessGate). */
 const PUBLIC_POST_PATHS = new Set([
   '/users',
+  '/sellers',
   '/users/login',
   '/users/verify-otp',
   '/users/send-otp-toEmail',
@@ -53,6 +55,8 @@ const PUBLIC_POST_PATHS = new Set([
   '/shipping/getRate',
   '/coupon/apply-coupon',
   '/sellers/sellerByIds',
+  '/seller-membership/checkout',
+  '/seller-membership/verify',
 ]);
 
 export function isPublicPostPath(url: string | undefined): boolean {

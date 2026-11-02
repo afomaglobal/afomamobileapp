@@ -3,7 +3,7 @@ import type { SellerNavigation } from '../../../../app/navigation/sellerTypes';
 import type { SellerProfile } from '../../types/sellerProfile';
 import {
   canSellerCreateProducts,
-  SELLER_PRODUCT_CREATION_BLOCKED_MESSAGE,
+  getSellerProductCreationBlockReason,
 } from '../../utils/sellerProductGate';
 import { navigateToSellerSetupHub } from '../../utils/sellerSetupNavigation';
 import { navigateToSellerNewListingCreate } from './sellerProductCreateNavigation';
@@ -19,7 +19,9 @@ export function promptIncompleteSellerSetup(
   navigation: SellerNavigation,
   profile?: SellerProfile | null,
 ) {
-  Alert.alert('Complete seller setup', SELLER_PRODUCT_CREATION_BLOCKED_MESSAGE, [
+  const message =
+    getSellerProductCreationBlockReason(profile) ?? 'You cannot create listings right now.';
+  Alert.alert('Listing unavailable', message, [
     { text: 'Cancel', style: 'cancel' },
     {
       text: 'Continue setup',

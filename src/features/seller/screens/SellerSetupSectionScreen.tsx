@@ -23,6 +23,7 @@ import { AppInput } from '../../../components/ui/AppInput';
 import { AppText } from '../../../components/ui/AppText';
 import { ImageUploadSourceSheet } from '../../../components/ui/ImageUploadSourceSheet';
 import { colors, spacing } from '../../../design-system';
+import { SELLER_REGISTRATION_COUNTRY_OPTIONS } from '../../auth/constants/sellerRegistrationCountries';
 import { AccountGenderSelector } from '../../account/components/AccountGenderSelector';
 import type { SellerStackParamList } from '../../../app/navigation/sellerTypes';
 import { authReturnTo } from '../../auth/utils/authNavigation';
@@ -303,6 +304,7 @@ export function SellerSetupSectionScreen({ route, navigation }: Props) {
               countryError={fieldErrors.country}
               stateError={fieldErrors.state}
               required
+              countryOptions={SELLER_REGISTRATION_COUNTRY_OPTIONS}
             />
             <AppInput
               tone={SELLER_SETUP_FIELD_TONE}

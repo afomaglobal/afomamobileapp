@@ -24,7 +24,10 @@ import {
   type RegistrationFormField,
   type RegistrationFormValues,
 } from '../types/registration';
-import { useRegistrationCountryOptions } from '../utils/registrationCountries';
+import {
+  useBuyerRegistrationCountryOptions,
+  useSellerRegistrationCountryOptions,
+} from '../utils/registrationCountries';
 import { validateRegistrationForm } from '../utils/registrationValidation';
 import { SellerRegistrationPlanPicker } from '../../seller/membership/components/SellerRegistrationPlanPicker';
 import type { SellerBillingCycle, SellerMembershipTierId } from '../../seller/membership/types/sellerMembership';
@@ -34,7 +37,9 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'RegisterAccount'>;
 export function RegisterAccountScreen({ navigation, route }: Props) {
   const { accountType, membershipTier: initialTier, billingCycle: initialCycle } = route.params;
   const isSeller = accountType === 'seller';
-  const countryOptions = useRegistrationCountryOptions();
+  const buyerCountryOptions = useBuyerRegistrationCountryOptions();
+  const sellerCountryOptions = useSellerRegistrationCountryOptions();
+  const countryOptions = isSeller ? sellerCountryOptions : buyerCountryOptions;
 
   const [membershipTier, setMembershipTier] = useState<SellerMembershipTierId>(
     initialTier ?? 'test_drive',

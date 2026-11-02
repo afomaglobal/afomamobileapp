@@ -1,4 +1,8 @@
 import { requiresReferralMember } from '../constants/registrationOptions';
+import {
+  isSellerRegistrationCountryAllowed,
+  SELLER_REGISTRATION_COUNTRY_REJECT_MESSAGE,
+} from '../constants/sellerRegistrationCountries';
 import type {
   RegistrationAccountType,
   RegistrationFormErrors,
@@ -50,6 +54,11 @@ export function validateRegistrationForm(
 
   if (!values.country.trim()) {
     errors.country = 'Required';
+  } else if (
+    accountType === 'seller' &&
+    !isSellerRegistrationCountryAllowed(values.country, values.countryCode)
+  ) {
+    errors.country = SELLER_REGISTRATION_COUNTRY_REJECT_MESSAGE;
   }
 
   if (!values.state.trim()) {

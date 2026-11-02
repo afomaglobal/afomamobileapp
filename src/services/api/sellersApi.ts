@@ -4,7 +4,7 @@ import type { Seller, SellerByIdsRequest, SellerByIdsResponse } from '../types/s
 import type { Review } from '../types/review';
 import type { PaginationParams } from '../types/common';
 import { apiClient } from './client';
-import { apiGet, apiPost, apiPut } from './request';
+import { apiDelete, apiGet, apiPost, apiPut } from './request';
 import { toApiError } from './errors';
 import { resolveUserProfileImageUrl } from '../../utils/resolveUserProfileImageUrl';
 
@@ -66,6 +66,15 @@ function resolveUploadedProfileImageUrl(data: UploadProfileImageResponse): strin
   }
 
   throw new Error('Upload response did not include a profile image URL');
+}
+
+/** DELETE /sellers/me/account — purge seller profile, listings, and linked user (web parity). */
+export async function deleteMySellerAccount(): Promise<{ message: string }> {
+  return apiDelete<{ message: string }>(
+    '/sellers/me/account',
+    undefined,
+    'Failed to delete seller account',
+  );
 }
 
 /** PUT /sellers/seller-shop/update-status/{sellerId}?shop_status=0|1 — web parity. */

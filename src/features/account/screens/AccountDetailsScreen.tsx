@@ -64,7 +64,8 @@ export function AccountDetailsScreen(_props: Props) {
     saveProfile,
     retry,
   } = useAccountDetails(authUserId, user);
-  const { confirmAndDelete, isDeleting, error: deleteError } = useDeleteAccount(authUserId);
+  const { confirmAndDelete, isDeleting, error: deleteError, isSellerAccount } =
+    useDeleteAccount(authUserId);
 
   const countryStateValue = useMemo(
     () => ({
@@ -245,10 +246,11 @@ export function AccountDetailsScreen(_props: Props) {
       />
 
         <AppCard style={styles.dangerCard}>
-          <SectionTitle>Delete account</SectionTitle>
+          <SectionTitle>{isSellerAccount ? 'Delete seller account' : 'Delete account'}</SectionTitle>
           <AppText variant="bodySmall" color="textSecondary" style={styles.dangerCopy}>
-            Permanently delete your account and personal shopping data. Financial and order records may be
-            retained as described in our privacy policy.
+            {isSellerAccount
+              ? 'Permanently remove your seller profile, listings, and login. Financial and order records may be retained as described in our privacy policy.'
+              : 'Permanently delete your account and personal shopping data. Financial and order records may be retained as described in our privacy policy.'}
           </AppText>
           <Pressable
             accessibilityRole="link"
@@ -264,7 +266,7 @@ export function AccountDetailsScreen(_props: Props) {
             </AppText>
           ) : null}
           <AppButton
-            label="Delete account"
+            label={isSellerAccount ? 'Delete seller account' : 'Delete account'}
             variant="outline"
             fullWidth
             loading={isDeleting}

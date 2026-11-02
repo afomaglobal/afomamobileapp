@@ -13,22 +13,14 @@ import { setCartMemoryCache } from './cartMemoryCache';
 import { notifyCartChanged } from './cartRefresh';
 import { mergeProductIntoCart, parseMaxQuantity } from './cartLineMerge';
 import { formatServiceAppointmentSummary, isServiceAppointmentLine } from '../../services/utils/serviceCartLine';
+import { calculateSubTotal, normalizeCartMap } from './cartMapMath';
+
+export { calculateSubTotal, getCartItemCount, normalizeCartMap } from './cartMapMath';
 
 const ZERO_SHIPPING_RATES = {
   totalShippingRate: 0,
   fetchedShippingRate: 0,
 } as const;
-
-export function normalizeCartMap(cart: CartMap | null | undefined): CartMap {
-  if (!cart || typeof cart !== 'object' || Array.isArray(cart)) {
-    return {};
-  }
-  return cart;
-}
-
-export function calculateSubTotal(cart: CartMap): number {
-  return Object.values(normalizeCartMap(cart)).reduce((sum, line) => sum + (line.totalAmount ?? 0), 0);
-}
 
 export function getCartEntries(cart: CartMap): Array<{ id: string; line: CartMap[string] }> {
   return Object.entries(normalizeCartMap(cart)).map(([id, line]) => ({ id, line }));
@@ -38,10 +30,6 @@ export function removeCartLine(cart: CartMap, itemId: string): CartMap {
   const nextCart = { ...cart };
   delete nextCart[itemId];
   return nextCart;
-}
-
-export function getCartItemCount(cart: CartMap): number {
-  return Object.values(cart).reduce((sum, line) => sum + (line.orderQuantiy ?? 0), 0);
 }
 
 export function getCartLineAttributes(line: CartLineItem): string | undefined {

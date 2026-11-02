@@ -24,6 +24,12 @@ import {
   getSellerShopVisibilityLabel,
   resolveSellerShopVisibilityMeta,
 } from '../utils/shopVisibilityDisplay';
+import {
+  canSellerActivateMarketplace,
+  isNigeriaSellerRecord,
+  SELLER_MARKETPLACE_GEO_BLOCKED_MESSAGE,
+} from '../../utils/sellerMarketplaceGeo';
+import { useDeleteSellerAccount } from '../../../account/hooks/useDeleteAccount';
 
 type Props = NativeStackScreenProps<SellerStackParamList, 'SellerShopSettings'>;
 
@@ -80,6 +86,11 @@ export function SellerShopSettingsScreen(_props: Props) {
 
     clearUpdateError();
 
+    if (nextVisible && !canActivateShop) {
+      Alert.alert('Shop unavailable', SELLER_MARKETPLACE_GEO_BLOCKED_MESSAGE);
+      return;
+    }
+
     if (!nextVisible) {
       Alert.alert(
         'Hide your shop?',
@@ -129,6 +140,14 @@ export function SellerShopSettingsScreen(_props: Props) {
 
   const shopName = getSellerShopDisplayName(profile);
   const visibilityMeta = resolveSellerShopVisibilityMeta(profile);
+  const canActivateShop = canSellerActivateMarketplace(profile);
+  const showDeleteSellerAccount = Boolean(profile && !isNigeriaSellerRecord(profile));
+  const {
+    confirmAndDelete: confirmDeleteSellerAccount,
+    isDeleting: isDeletingSellerAccount,
+    error: deleteSellerError,
+    clearError: clearDeleteSellerError,
+  } = useDeleteSellerAccount();
   const showSkeleton = isLoading && !profile && !error;
 
   if (error && !profile) {
@@ -190,9 +209,17 @@ export function SellerShopSettingsScreen(_props: Props) {
         ) : (
           <>
             <AdminSettingsHubSection title="Storefront">
+              {!canActivateShop ? (
+                <AppCard variant="flat">
+                  <AppText variant="bodySmall" color="textSecondary">
+                    {SELLER_MARKETPLACE_GEO_BLOCKED_MESSAGE}
+                  </AppText>
+                </AppCard>
+              ) : null}
               <SellerShopVisibilityCard
                 profile={profile}
                 isUpdating={isUpdating}
+                canActivateShop={canActivateShop}
                 onVisibilityChange={handleVisibilityChange}
               />
             </AdminSettingsHubSection>
@@ -200,6 +227,34 @@ export function SellerShopSettingsScreen(_props: Props) {
             <AdminSettingsHubSection title="Customer outreach">
               <SellerAbandonedCartSettingCard onPress={handleOpenEmailModal} />
             </AdminSettingsHubSection>
+
+            {showDeleteSellerAccount ? (
+              <AdminSettingsHubSection title="Account">
+                <AppCard variant="flat" style={styles.deleteCard}>
+                  <AppText variant="label">Delete seller account</AppText>
+                  <AppText variant="bodySmall" color="textSecondary" style={styles.deleteCopy}>
+                    Permanently remove your seller profile, listings, and login. This cannot be undone.
+                  </AppText>
+                  {deleteSellerError ? (
+                    <AppText variant="caption" color="error">
+                      {deleteSellerError}
+                    </AppText>
+                  ) : null}
+                  <AppButton
+                    label={isDeletingSellerAccount ? 'Deleting…' : 'Delete my account'}
+                    variant="outline"
+                    fullWidth
+                    loading={isDeletingSellerAccount}
+                    disabled={isUpdating}
+                    onPress={() => {
+                      clearDeleteSellerError();
+                      confirmDeleteSellerAccount();
+                    }}
+                    labelStyle={{ color: colors.error }}
+                  />
+                </AppCard>
+              </AdminSettingsHubSection>
+            ) : null}
           </>
         )}
       </ScrollView>
@@ -258,5 +313,11 @@ const styles = StyleSheet.create({
   },
   skeletonList: {
     gap: spacing.md,
+  },
+  deleteCard: {
+    gap: spacing.sm,
+  },
+  deleteCopy: {
+    marginTop: spacing.xs,
   },
 });

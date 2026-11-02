@@ -1,5 +1,6 @@
 import type { SelectOption } from '../../../utils/regionOptions';
 
+/** Buyer registration blocklist (sanctions). Seller registration uses Nigeria-only allowlist separately. */
 export const BLOCKED_REGISTRATION_COUNTRIES = [
   'Belarus',
   'Central African Republic',

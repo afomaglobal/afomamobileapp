@@ -34,7 +34,11 @@ import {
   openSellerAddServiceFlow,
   openSellerProductTypeSelection,
 } from '../products/utils/sellerProductCreationNavigation';
-import { canSellerCreateProducts, SELLER_PRODUCT_CREATION_BLOCKED_MESSAGE } from '../utils/sellerProductGate';
+import {
+  canSellerCreateProducts,
+  getSellerProductCreationBlockReason,
+} from '../utils/sellerProductGate';
+import { canSellerActivateMarketplace, SELLER_MARKETPLACE_GEO_BLOCKED_MESSAGE } from '../utils/sellerMarketplaceGeo';
 import {
   isSellerSetupFlowComplete,
 } from '../utils/sellerSetupSections';
@@ -97,10 +101,12 @@ export function SellerProductsScreen({ navigation, route }: Props) {
     busyProductId,
   } = useSellerProductCardActions(navigation, () => {
     void refresh();
-  });
+  }, profile);
 
   const setupComplete = isSellerSetupFlowComplete(profile?.profileSetup, profile);
+  const canActivateMarketplace = canSellerActivateMarketplace(profile);
   const canCreate = canSellerCreateProducts(profile);
+  const createBlockReason = getSellerProductCreationBlockReason(profile);
   const showSkeletonList = isLoading && pageProducts.length === 0 && !error;
 
   useFocusEffect(
@@ -174,6 +180,14 @@ export function SellerProductsScreen({ navigation, route }: Props) {
     <View style={styles.headerContent}>
       {setupBanner}
 
+      {!canActivateMarketplace ? (
+        <AppCard variant="flat">
+          <AppText variant="bodySmall" color="textSecondary">
+            {SELLER_MARKETPLACE_GEO_BLOCKED_MESSAGE}
+          </AppText>
+        </AppCard>
+      ) : null}
+
       <OrderListSearchBar
         value={searchInput}
         onChangeText={setSearchInput}
@@ -221,9 +235,9 @@ export function SellerProductsScreen({ navigation, route }: Props) {
         </AppText>
       ) : null}
 
-      {!canCreate ? (
+      {createBlockReason ? (
         <AppText variant="caption" color="textMuted">
-          {SELLER_PRODUCT_CREATION_BLOCKED_MESSAGE}
+          {createBlockReason}
         </AppText>
       ) : null}
 

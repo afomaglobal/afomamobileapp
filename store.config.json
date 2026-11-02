@@ -1,6 +1,7 @@
 {
   "configVersion": 0,
   "apple": {
+    "version": "1.0.0",
     "copyright": "2026 AFOMA Marketplace",
     "categories": ["SHOPPING", "LIFESTYLE"],
     "advisory": {
@@ -48,7 +49,7 @@
       }
     },
     "release": {
-      "automaticRelease": true
+      "automaticRelease": false
     },
     "review": {
       "firstName": "AFOMA",
@@ -56,7 +57,9 @@
       "email": "contact@afoma.io",
       "phone": "+13652936113",
       "demoRequired": true,
-      "notes": "AFOMA Marketplace review guide. Support: +13652936113, contact@afoma.io (monitored during review). SIGN-IN: email + OTP only—no password. Put demo buyer email in Sign-In Required; OTP is emailed to that address. BUYER: Account → sign in → Home/Categories → physical (Standard) product → Add to cart → Checkout → Payment (sandbox/test only) → Account → My Orders. MESSAGES: Account → Messages → report (flag) / block (ban icon) in thread header. SELLER: sign out → seller demo email + OTP → Account → Seller → Dashboard, Listing Management (skip membership payment unless test mode). DELETE ACCOUNT (disposable test user only): Account → Account details → Delete account. Full steps, no secrets in repo: store/REVIEWER_ACCESS.template.md"
+      "demoUsername": "SET_APP_STORE_DEMO_USERNAME_ENV",
+      "demoPassword": "OTP-only — no password; code emailed to the demo username.",
+      "notes": "STAGING BACKEND (review builds): development.afomamarketplace.com API; staging storefront. Demo buyer email matches Sign-In Required username; OTP is emailed—no password. Support: +13652936113, contact@afoma.io (monitored during review). BUYER: Account → sign in → OTP → Home/Categories → Standard product → Cart → Checkout → Payment (sandbox/test on staging) → My Orders. SELLER: sign out → seller demo email + OTP → Account → Seller → Dashboard / Listing Management (skip membership fee unless test mode). DELETE ACCOUNT: disposable test user only — Account → Account details → Delete account. Full steps: store/REVIEWER_ACCESS.template.md"
     }
   }
 }

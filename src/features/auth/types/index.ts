@@ -47,6 +47,7 @@ export interface RequestOtpResponse {
   otpToken?: string;
   error?: string;
   message?: string;
+  code?: string;
 }
 
 export interface VerifyOtpResponse {

@@ -13,12 +13,14 @@ import { SellerSettingsOptionCard } from './SellerSettingsOptionCard';
 export interface SellerShopVisibilityCardProps {
   profile?: SellerProfile | null;
   isUpdating?: boolean;
+  canActivateShop?: boolean;
   onVisibilityChange: (visible: boolean) => void;
 }
 
 export function SellerShopVisibilityCard({
   profile,
   isUpdating = false,
+  canActivateShop = true,
   onVisibilityChange,
 }: SellerShopVisibilityCardProps) {
   const isVisible = isSellerShopVisible(profile);
@@ -37,8 +39,13 @@ export function SellerShopVisibilityCard({
           {isUpdating ? <ActivityIndicator size="small" color={colors.primary} /> : null}
           <Switch
             value={isVisible}
-            onValueChange={onVisibilityChange}
-            disabled={isUpdating}
+            onValueChange={(nextVisible) => {
+              if (nextVisible && !canActivateShop) {
+                return;
+              }
+              onVisibilityChange(nextVisible);
+            }}
+            disabled={isUpdating || (!canActivateShop && !isVisible)}
             trackColor={{ false: colors.borderStrong, true: colors.primarySoft }}
             thumbColor={isVisible ? colors.primary : colors.surface}
           />

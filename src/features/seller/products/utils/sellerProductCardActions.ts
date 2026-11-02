@@ -2,7 +2,11 @@ import type { Product } from '../../../../services/types/product';
 import { canSubmitProductForReview } from '../api/sellerProductsApi';
 import type { SellerProductCardAction } from '../components/SellerProductCardActionsMenu';
 
-export function buildSellerProductCardActions(product: Product): SellerProductCardAction[] {
+export function buildSellerProductCardActions(
+  product: Product,
+  options?: { canActivateListings?: boolean },
+): SellerProductCardAction[] {
+  const canActivateListings = options?.canActivateListings ?? true;
   const isActive = product.status === 1;
   const canSubmit = canSubmitProductForReview(product.productStatus);
 
@@ -17,7 +21,11 @@ export function buildSellerProductCardActions(product: Product): SellerProductCa
   actions.push(
     isActive
       ? { id: 'deactivate', label: 'Deactivate' }
-      : { id: 'activate', label: 'Activate' },
+      : {
+          id: 'activate',
+          label: 'Activate',
+          disabled: !canActivateListings,
+        },
     { id: 'delete', label: 'Delete', destructive: true },
   );
 

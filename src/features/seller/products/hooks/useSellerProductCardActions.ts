@@ -10,6 +10,8 @@ import {
   updateProductsActiveStatus,
 } from '../api/sellerProductsApi';
 import type { SellerProductCardActionId } from '../components/SellerProductCardActionsMenu';
+import type { SellerProfile } from '../../types/sellerProfile';
+import { canSellerActivateMarketplace, SELLER_MARKETPLACE_GEO_BLOCKED_MESSAGE } from '../../utils/sellerMarketplaceGeo';
 import { buildSellerProductCardActions } from '../utils/sellerProductCardActions';
 import { navigateToEditProduct } from '../utils/sellerProductNavigation';
 
@@ -18,7 +20,9 @@ type SellerNavigation = Parameters<typeof navigateToEditProduct>[0];
 export function useSellerProductCardActions(
   navigation: SellerNavigation,
   onListChanged: () => void,
+  profile?: SellerProfile | null,
 ) {
+  const canActivateListings = canSellerActivateMarketplace(profile);
   const [menuProduct, setMenuProduct] = useState<Product | null>(null);
   const [busyProductId, setBusyProductId] = useState<string | null>(null);
 
@@ -73,6 +77,11 @@ export function useSellerProductCardActions(
         return;
       }
 
+      if (nextStatus === 1 && !canActivateListings) {
+        Alert.alert('Activation unavailable', SELLER_MARKETPLACE_GEO_BLOCKED_MESSAGE);
+        return;
+      }
+
       void runWithBusy(productId, async () => {
         try {
           await updateProductsActiveStatus([productId], nextStatus);
@@ -86,7 +95,7 @@ export function useSellerProductCardActions(
         }
       });
     },
-    [onListChanged, runWithBusy],
+    [canActivateListings, onListChanged, runWithBusy],
   );
 
   const handleDelete = useCallback(
@@ -154,7 +163,9 @@ export function useSellerProductCardActions(
     [closeMenu, handleDelete, handleEdit, handleSubmitForReview, handleToggleActive, menuProduct],
   );
 
-  const menuActions = menuProduct ? buildSellerProductCardActions(menuProduct) : [];
+  const menuActions = menuProduct
+    ? buildSellerProductCardActions(menuProduct, { canActivateListings })
+    : [];
 
   return {
     menuProduct,
