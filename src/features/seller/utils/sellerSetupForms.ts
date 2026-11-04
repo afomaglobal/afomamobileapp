@@ -327,10 +327,10 @@ export function buildSellerPoliciesPayload(values: SellerPoliciesFormValues) {
 
 /** @deprecated Use `useShippingCurrencyOptions` — web loads the full currency catalog. */
 export const CURRENCY_OPTIONS = [
-  { label: 'CAD — Canadian Dollar', value: 'cad' },
-  { label: 'USD — US Dollar', value: 'usd' },
-  { label: 'EUR — Euro', value: 'eur' },
-  { label: 'GBP — British Pound', value: 'gbp' },
+  // { label: 'CAD — Canadian Dollar', value: 'cad' },
+  // { label: 'USD — US Dollar', value: 'usd' },
+  // { label: 'EUR — Euro', value: 'eur' },
+  // { label: 'GBP — British Pound', value: 'gbp' },
   { label: 'NGN — Nigerian Naira', value: 'ngn' },
 ];
 
