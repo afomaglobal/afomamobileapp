@@ -36,7 +36,7 @@ export function createEmptyDownloadableProductForm(): DownloadableProductFormVal
     childCategoryId: '',
     inventory: '',
     price: '',
-    currency: 'cad',
+    currency: 'ngn',
     currencyPrice: '',
     commodityCode: '',
     metaTitle: '',

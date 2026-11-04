@@ -61,7 +61,7 @@ export function buildStandardProductPayload(
     freeDelivery: values.isCustomShipping ? values.freeDelivery : false,
     handlingFee,
     additionalCost,
-    currency: values.currency || 'cad',
+    currency: values.currency || 'ngn',
     currencyPrice: values.currencyPrice.trim() ? values.currencyPrice.trim() : 1,
     currencyRate: currencyRate || 1,
   };

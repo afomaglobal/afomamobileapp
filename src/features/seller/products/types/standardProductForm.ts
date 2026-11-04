@@ -47,7 +47,7 @@ export function createEmptyStandardProductForm(): StandardProductFormValues {
     inventory: '',
     quantity: '',
     price: '',
-    currency: 'cad',
+    currency: 'ngn',
     currencyPrice: '',
     weight: '',
     length: '',
