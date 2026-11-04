@@ -86,6 +86,11 @@ export function validateDownloadableProductStep(
     }
 
     case 'additional':
+      for (const field of ['metaTitle', 'metaKeywords', 'metaDesc'] as const) {
+        if (!values[field].trim()) {
+          errors[field] = 'Required';
+        }
+      }
       break;
 
     case 'review':
@@ -109,6 +114,7 @@ export function validateDownloadableProductForm(
     'images',
     'pricing',
     'download',
+    'additional',
   ];
 
   return steps.reduce<Record<string, string>>((accumulator, step) => {

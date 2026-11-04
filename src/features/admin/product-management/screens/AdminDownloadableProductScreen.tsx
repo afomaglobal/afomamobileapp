@@ -299,16 +299,25 @@ export function AdminDownloadableProductScreen({ navigation, route }: Props) {
         return (
           <View style={styles.stepContent}>
             <MetaTitleInput
+              label="Meta title *"
               value={wizard.values.metaTitle}
               onChangeText={(text) => wizard.updateField('metaTitle', text)}
+              placeholder="Enter SEO title"
+              error={wizard.fieldErrors.metaTitle}
             />
             <MetaKeywordsInput
+              label="Meta keywords *"
               value={wizard.values.metaKeywords}
               onChangeText={(text) => wizard.updateField('metaKeywords', text)}
+              placeholder="Enter keywords"
+              error={wizard.fieldErrors.metaKeywords}
             />
             <MetaDescriptionInput
+              label="Meta description *"
               value={wizard.values.metaDesc}
               onChangeText={(text) => wizard.updateField('metaDesc', text)}
+              placeholder="Enter SEO description"
+              error={wizard.fieldErrors.metaDesc}
             />
             <AppInput tone="surface"
               label="Discount (%)"

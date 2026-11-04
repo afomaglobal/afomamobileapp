@@ -41,6 +41,25 @@ function validateShippingExtras(values: CustomizableProductFormValues): Record<s
   return errors;
 }
 
+function validateAdditionalFields(values: CustomizableProductFormValues): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  for (const field of ['commodityCode', 'metaTitle', 'metaKeywords', 'metaDesc'] as const) {
+    if (!values[field].trim()) {
+      errors[field] = 'Required';
+    }
+  }
+
+  const discount = values.discountCode.trim();
+  if (!discount) {
+    errors.discountCode = 'Required';
+  } else if (!NUMERIC_PATTERN.test(discount) || Number(discount) <= 0) {
+    errors.discountCode = 'Enter a percentage greater than 0';
+  }
+
+  return errors;
+}
+
 export function validateCustomizableProductStep(
   step: CustomizableWizardStepId,
   values: CustomizableProductFormValues,
@@ -99,6 +118,7 @@ export function validateCustomizableProductStep(
     }
 
     case 'additional':
+      Object.assign(errors, validateAdditionalFields(values));
       break;
 
     case 'review':
@@ -115,7 +135,13 @@ export function validateCustomizableProductForm(
   values: CustomizableProductFormValues,
   images: StandardProductImageEntry[],
 ): Record<string, string> {
-  const steps: CustomizableWizardStepId[] = ['basic', 'categories', 'images', 'shipping'];
+  const steps: CustomizableWizardStepId[] = [
+    'basic',
+    'categories',
+    'images',
+    'shipping',
+    'additional',
+  ];
 
   return steps.reduce<Record<string, string>>((accumulator, step) => {
     const stepErrors = validateCustomizableProductStep(step, values, images);

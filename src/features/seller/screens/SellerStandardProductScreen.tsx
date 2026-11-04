@@ -376,37 +376,48 @@ export function SellerStandardProductScreen({ navigation, route }: Props) {
           </View>
         );
 
-      case 'additional':
-        return (
-          <View style={styles.stepContent}>
-            <AppInput tone="surface"
-              label="Commodity code"
-              value={wizard.values.commodityCode}
-              onChangeText={(text) => wizard.updateField('commodityCode', text)}
-              placeholder="Optional HS code"
-            />
-            <MetaTitleInput
-              value={wizard.values.metaTitle}
-              onChangeText={(text) => wizard.updateField('metaTitle', text)}
-            />
-            <MetaKeywordsInput
-              value={wizard.values.metaKeywords}
-              onChangeText={(text) => wizard.updateField('metaKeywords', text)}
-            />
-            <MetaDescriptionInput
-              value={wizard.values.metaDesc}
-              onChangeText={(text) => wizard.updateField('metaDesc', text)}
-            />
-            <AppInput tone="surface"
-              label="Discount (%)"
-              value={wizard.values.discountCode}
-              onChangeText={(text) => wizard.updateField('discountCode', text)}
-              placeholder="Optional discount percentage"
-              keyboardType="number-pad"
-            />
-          </View>
-        );
-
+       case 'additional':
+         return (
+           <View style={styles.stepContent}>
+             <AppInput tone="surface"
+               label="Commodity code *"
+               value={wizard.values.commodityCode}
+               onChangeText={(text) => wizard.updateField('commodityCode', text)}
+               placeholder="Enter HS code"
+               error={wizard.fieldErrors.commodityCode}
+             />
+             <MetaTitleInput
+               label="Meta title *"
+               value={wizard.values.metaTitle}
+               onChangeText={(text) => wizard.updateField('metaTitle', text)}
+               placeholder="Enter SEO title"
+               error={wizard.fieldErrors.metaTitle}
+             />
+             <MetaKeywordsInput
+               label="Meta keywords *"
+               value={wizard.values.metaKeywords}
+               onChangeText={(text) => wizard.updateField('metaKeywords', text)}
+               placeholder="Enter keywords"
+               error={wizard.fieldErrors.metaKeywords}
+             />
+             <MetaDescriptionInput
+               label="Meta description *"
+               value={wizard.values.metaDesc}
+               onChangeText={(text) => wizard.updateField('metaDesc', text)}
+               placeholder="Enter SEO description"
+               error={wizard.fieldErrors.metaDesc}
+             />
+             <AppInput tone="surface"
+               label="Discount (%) *"
+               value={wizard.values.discountCode}
+               onChangeText={(text) => wizard.updateField('discountCode', text)}
+               placeholder="Enter discount percentage"
+               keyboardType="number-pad"
+               error={wizard.fieldErrors.discountCode}
+             />
+           </View>
+         );
+         
       case 'review':
         return (
           <View style={styles.stepContent}>
