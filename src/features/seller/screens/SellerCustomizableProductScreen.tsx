@@ -269,11 +269,6 @@ export function SellerCustomizableProductScreen({ navigation, route }: Props) {
               keyboardType="decimal-pad"
               error={wizard.fieldErrors.discountCode}
             />
-          </View>
-        );
-      case 'review':
-        return (
-          <View style={styles.stepContent}>
             <AppText variant="bodySmall" color="textSecondary">
               Save the base product, then configure variations on the next screen.
             </AppText>
@@ -322,16 +317,14 @@ export function SellerCustomizableProductScreen({ navigation, route }: Props) {
           </AppText>
           {renderStep()}
         </AppCard>
-        {wizard.currentStep.id !== 'review' ? (
-          <View style={styles.footerActions}>
-            {!wizard.isFirstStep ? (
-              <AppButton label="Back" variant="outline" onPress={wizard.goBack} style={styles.footerButton} />
-            ) : null}
-            {!wizard.isLastStep ? (
-              <AppButton label="Next" onPress={wizard.goNext} style={styles.footerButton} />
-            ) : null}
-          </View>
-        ) : null}
+        <View style={styles.footerActions}>
+          {!wizard.isFirstStep ? (
+            <AppButton label="Back" variant="outline" onPress={wizard.goBack} style={styles.footerButton} />
+          ) : null}
+          {!wizard.isLastStep ? (
+            <AppButton label="Next" onPress={wizard.goNext} style={styles.footerButton} />
+          ) : null}
+        </View>
     </KeyboardAwareFormScreen>
     <ListingFeePaymentModal {...wizard.listingFeeModalProps} />
     </>

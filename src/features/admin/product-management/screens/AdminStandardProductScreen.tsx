@@ -9,7 +9,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { ErrorState } from '../../../../components/ecommerce/ErrorState';
 import {
-  ExpandableProductNameText,
   KeyboardAwareFormScreen,
   MetaDescriptionInput,
   MetaKeywordsInput,
@@ -403,29 +402,6 @@ export function AdminStandardProductScreen({ navigation, route }: Props) {
               keyboardType="number-pad"
               error={wizard.fieldErrors.discountCode}
             />
-          </View>
-        );
-
-      case 'review':
-        return (
-          <View style={styles.stepContent}>
-            <AppText variant="bodyMedium" style={styles.reviewTitle}>
-              Review product
-            </AppText>
-            <ExpandableProductNameText label="Name" value={wizard.values.productName} />
-            <AppText variant="bodySmall" color="textSecondary">
-              Category: {wizard.values.categoryId ? 'Selected' : '—'}
-            </AppText>
-            <AppText variant="bodySmall" color="textSecondary">
-              Images: {wizard.uploadedImageCount}
-            </AppText>
-            <AppText variant="bodySmall" color="textSecondary">
-              Price (CAD): {wizard.values.price || '—'}
-            </AppText>
-            <AppText variant="bodySmall" color="textSecondary">
-              Inventory: {wizard.values.inventory || '—'} / Qty {wizard.values.quantity || '—'}
-            </AppText>
-
             {wizard.saveSuccessMessage ? (
               <AppCard variant="muted">
                 <AppText variant="bodySmall" color="success">
@@ -487,16 +463,14 @@ export function AdminStandardProductScreen({ navigation, route }: Props) {
           {renderStep()}
         </AppCard>
 
-        {wizard.currentStep.id !== 'review' ? (
-          <View style={styles.footerActions}>
-            {!wizard.isFirstStep ? (
-              <AppButton label="Back" variant="outline" onPress={wizard.goBack} style={styles.footerButton} />
-            ) : null}
-            {!wizard.isLastStep ? (
-              <AppButton label="Next" onPress={wizard.goNext} style={styles.footerButton} />
-            ) : null}
-          </View>
-        ) : null}
+        <View style={styles.footerActions}>
+          {!wizard.isFirstStep ? (
+            <AppButton label="Back" variant="outline" onPress={wizard.goBack} style={styles.footerButton} />
+          ) : null}
+          {!wizard.isLastStep ? (
+            <AppButton label="Next" onPress={wizard.goNext} style={styles.footerButton} />
+          ) : null}
+        </View>
     </KeyboardAwareFormScreen>
   );
 }
@@ -559,9 +533,5 @@ const styles = StyleSheet.create({
   },
   inlineError: {
     marginHorizontal: 0,
-  },
-  reviewTitle: {
-    fontWeight: '700',
-    color: colors.textPrimary,
   },
 });

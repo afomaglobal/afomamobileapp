@@ -93,9 +93,6 @@ export function validateDownloadableProductStep(
       }
       break;
 
-    case 'review':
-      return validateDownloadableProductForm(values, images, hasDownloadFile);
-
     default:
       break;
   }

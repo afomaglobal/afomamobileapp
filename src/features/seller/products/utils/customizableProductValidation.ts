@@ -121,9 +121,6 @@ export function validateCustomizableProductStep(
       Object.assign(errors, validateAdditionalFields(values));
       break;
 
-    case 'review':
-      return validateCustomizableProductForm(values, images);
-
     default:
       break;
   }

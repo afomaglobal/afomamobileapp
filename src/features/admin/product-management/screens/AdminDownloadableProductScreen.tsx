@@ -325,11 +325,6 @@ export function AdminDownloadableProductScreen({ navigation, route }: Props) {
               onChangeText={(text) => wizard.updateField('discountCode', text)}
               keyboardType="number-pad"
             />
-          </View>
-        );
-      case 'review':
-        return (
-          <View style={styles.stepContent}>
             {wizard.saveSuccessMessage ? (
               <AppCard variant="muted">
                 <AppText variant="bodySmall" color="success">
@@ -384,16 +379,14 @@ export function AdminDownloadableProductScreen({ navigation, route }: Props) {
           </AppText>
           {renderStep()}
         </AppCard>
-        {wizard.currentStep.id !== 'review' ? (
-          <View style={styles.footerActions}>
-            {!wizard.isFirstStep ? (
-              <AppButton label="Back" variant="outline" onPress={wizard.goBack} style={styles.footerButton} />
-            ) : null}
-            {!wizard.isLastStep ? (
-              <AppButton label="Next" onPress={wizard.goNext} style={styles.footerButton} />
-            ) : null}
-          </View>
-        ) : null}
+        <View style={styles.footerActions}>
+          {!wizard.isFirstStep ? (
+            <AppButton label="Back" variant="outline" onPress={wizard.goBack} style={styles.footerButton} />
+          ) : null}
+          {!wizard.isLastStep ? (
+            <AppButton label="Next" onPress={wizard.goNext} style={styles.footerButton} />
+          ) : null}
+        </View>
     </KeyboardAwareFormScreen>
   );
 }

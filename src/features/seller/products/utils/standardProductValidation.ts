@@ -148,9 +148,6 @@ export function validateStandardProductStep(
       Object.assign(errors, validateAdditionalFields(values));
       break;
 
-    case 'review':
-      return validateStandardProductForm(values, images);
-
     default:
       break;
   }
