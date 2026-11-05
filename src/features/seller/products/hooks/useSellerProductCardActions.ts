@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { getErrorMessage } from '../../../../services/api/errors';
 import { invalidateMarketplaceCatalog } from '../../../../services/cache/marketplaceCatalogInvalidation';
@@ -14,8 +15,10 @@ import type { SellerProfile } from '../../types/sellerProfile';
 import { canSellerActivateMarketplace, SELLER_MARKETPLACE_GEO_BLOCKED_MESSAGE } from '../../utils/sellerMarketplaceGeo';
 import { buildSellerProductCardActions } from '../utils/sellerProductCardActions';
 import { navigateToEditProduct } from '../utils/sellerProductNavigation';
+import type { SellerStackParamList } from '../../../../app/navigation/sellerTypes';
+import { navigateToSellerProductMobilePreview } from '../utils/sellerProductPreviewNavigation';
 
-type SellerNavigation = Parameters<typeof navigateToEditProduct>[0];
+type SellerNavigation = NativeStackNavigationProp<SellerStackParamList>;
 
 export function useSellerProductCardActions(
   navigation: SellerNavigation,
@@ -141,6 +144,14 @@ export function useSellerProductCardActions(
       }
 
       switch (actionId) {
+        case 'preview':
+          if (!navigateToSellerProductMobilePreview(navigation, product)) {
+            Alert.alert(
+              'Preview unavailable',
+              'This listing cannot be opened in the mobile storefront yet.',
+            );
+          }
+          break;
         case 'edit':
           handleEdit(product);
           break;
@@ -160,7 +171,15 @@ export function useSellerProductCardActions(
           break;
       }
     },
-    [closeMenu, handleDelete, handleEdit, handleSubmitForReview, handleToggleActive, menuProduct],
+    [
+      closeMenu,
+      handleDelete,
+      handleEdit,
+      handleSubmitForReview,
+      handleToggleActive,
+      menuProduct,
+      navigation,
+    ],
   );
 
   const menuActions = menuProduct

@@ -35,7 +35,7 @@ export function mapProductToStandardForm(product: Product): StandardProductFormV
   form.inventory = (product.inventory as SellerInventoryValue) ?? '';
   form.quantity = product.quantity != null ? String(product.quantity) : '';
   form.price = product.price != null ? String(product.price) : '';
-  form.currency = product.currency ?? 'cad';
+  form.currency = product.currency ?? 'ngn';
   form.currencyPrice =
     product.currencyPrice != null && product.currencyPrice !== ''
       ? String(product.currencyPrice)
@@ -71,7 +71,7 @@ export function mapProductToDownloadableForm(product: Product): DownloadableProd
   form.childCategoryId = resolveCategoryId(product.childCategory);
   form.inventory = (product.inventory as SellerInventoryValue) ?? '';
   form.price = product.price != null ? String(product.price) : '';
-  form.currency = product.currency ?? 'cad';
+  form.currency = product.currency ?? 'ngn';
   form.currencyPrice =
     product.currencyPrice != null && product.currencyPrice !== ''
       ? String(product.currencyPrice)
@@ -126,7 +126,7 @@ export function mapProductToCustomizableForm(product: Product): CustomizableProd
     product.discountCode != null && product.discountCode > 0
       ? String(product.discountCode)
       : '';
-  form.currency = product.currency ?? 'cad';
+  form.currency = product.currency ?? 'ngn';
   form.currencyPrice =
     product.currencyPrice != null && product.currencyPrice !== ''
       ? String(product.currencyPrice)

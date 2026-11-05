@@ -44,7 +44,7 @@ export function createEmptyCustomizableProductForm(): CustomizableProductFormVal
     metaKeywords: '',
     metaDesc: '',
     discountCode: '',
-    currency: 'cad',
+    currency: 'ngn',
     currencyPrice: '1',
   };
 }

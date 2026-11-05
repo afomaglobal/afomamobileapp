@@ -299,16 +299,25 @@ export function AdminDownloadableProductScreen({ navigation, route }: Props) {
         return (
           <View style={styles.stepContent}>
             <MetaTitleInput
+              label="Meta title *"
               value={wizard.values.metaTitle}
               onChangeText={(text) => wizard.updateField('metaTitle', text)}
+              placeholder="Enter SEO title"
+              error={wizard.fieldErrors.metaTitle}
             />
             <MetaKeywordsInput
+              label="Meta keywords *"
               value={wizard.values.metaKeywords}
               onChangeText={(text) => wizard.updateField('metaKeywords', text)}
+              placeholder="Enter keywords"
+              error={wizard.fieldErrors.metaKeywords}
             />
             <MetaDescriptionInput
+              label="Meta description *"
               value={wizard.values.metaDesc}
               onChangeText={(text) => wizard.updateField('metaDesc', text)}
+              placeholder="Enter SEO description"
+              error={wizard.fieldErrors.metaDesc}
             />
             <AppInput tone="surface"
               label="Discount (%)"
@@ -316,11 +325,6 @@ export function AdminDownloadableProductScreen({ navigation, route }: Props) {
               onChangeText={(text) => wizard.updateField('discountCode', text)}
               keyboardType="number-pad"
             />
-          </View>
-        );
-      case 'review':
-        return (
-          <View style={styles.stepContent}>
             {wizard.saveSuccessMessage ? (
               <AppCard variant="muted">
                 <AppText variant="bodySmall" color="success">
@@ -375,16 +379,14 @@ export function AdminDownloadableProductScreen({ navigation, route }: Props) {
           </AppText>
           {renderStep()}
         </AppCard>
-        {wizard.currentStep.id !== 'review' ? (
-          <View style={styles.footerActions}>
-            {!wizard.isFirstStep ? (
-              <AppButton label="Back" variant="outline" onPress={wizard.goBack} style={styles.footerButton} />
-            ) : null}
-            {!wizard.isLastStep ? (
-              <AppButton label="Next" onPress={wizard.goNext} style={styles.footerButton} />
-            ) : null}
-          </View>
-        ) : null}
+        <View style={styles.footerActions}>
+          {!wizard.isFirstStep ? (
+            <AppButton label="Back" variant="outline" onPress={wizard.goBack} style={styles.footerButton} />
+          ) : null}
+          {!wizard.isLastStep ? (
+            <AppButton label="Next" onPress={wizard.goNext} style={styles.footerButton} />
+          ) : null}
+        </View>
     </KeyboardAwareFormScreen>
   );
 }

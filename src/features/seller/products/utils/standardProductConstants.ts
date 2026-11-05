@@ -18,7 +18,6 @@ export const STANDARD_WIZARD_STEPS = [
   { id: 'pricing', title: 'Pricing & inventory' },
   { id: 'shipping', title: 'Shipping' },
   { id: 'additional', title: 'Additional information' },
-  { id: 'review', title: 'Review' },
 ] as const;
 
 export type StandardWizardStepId = (typeof STANDARD_WIZARD_STEPS)[number]['id'];

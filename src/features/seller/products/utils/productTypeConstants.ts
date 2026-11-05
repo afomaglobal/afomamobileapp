@@ -7,7 +7,6 @@ export const DOWNLOADABLE_WIZARD_STEPS = [
   { id: 'pricing', title: 'Pricing & inventory' },
   { id: 'download', title: 'Download file' },
   { id: 'additional', title: 'Additional information' },
-  { id: 'review', title: 'Review' },
 ] as const;
 
 export type DownloadableWizardStepId = (typeof DOWNLOADABLE_WIZARD_STEPS)[number]['id'];
@@ -20,7 +19,6 @@ export const CUSTOMIZABLE_WIZARD_STEPS = [
   { id: 'images', title: 'Images' },
   { id: 'shipping', title: 'Shipping' },
   { id: 'additional', title: 'Additional information' },
-  { id: 'review', title: 'Review' },
 ] as const;
 
 export type CustomizableWizardStepId = (typeof CUSTOMIZABLE_WIZARD_STEPS)[number]['id'];

@@ -285,26 +285,29 @@ export function ServiceProductForm({
               />
             </View>
             <AppText variant="h3" style={styles.seoHeading}>
-              SEO (optional)
+              SEO *
             </AppText>
             <AppInput
-              label="Meta title"
+              label="Meta title *"
               value={wizard.values.metaTitle}
               onChangeText={(metaTitle) => wizard.patchValues({ metaTitle })}
               placeholder="Short title for search"
+              error={wizard.fieldErrors.metaTitle}
             />
             <AppInput
-              label="Meta keywords"
+              label="Meta keywords *"
               value={wizard.values.metaKeywords}
               onChangeText={(metaKeywords) => wizard.patchValues({ metaKeywords })}
               placeholder="Keywords"
+              error={wizard.fieldErrors.metaKeywords}
             />
             <AppInput
-              label="Meta description"
+              label="Meta description *"
               value={wizard.values.metaDesc}
               onChangeText={(metaDesc) => wizard.patchValues({ metaDesc })}
               placeholder="Short description for search"
               multiline
+              error={wizard.fieldErrors.metaDesc}
             />
           </View>
         );

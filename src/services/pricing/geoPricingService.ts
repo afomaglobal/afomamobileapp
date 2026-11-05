@@ -8,13 +8,13 @@ import type { GeoLookupResult, UserPricingInfo } from './types';
 const IPWHOIS_URL = 'https://ipwhois.app/json/';
 
 const COUNTRY_CURRENCY_FALLBACK: Record<string, string> = {
-  pakistan: 'PKR',
+  // pakistan: 'PKR',
   nigeria: 'NGN',
-  'united states': 'USD',
-  'united kingdom': 'GBP',
-  canada: 'CAD',
-  india: 'INR',
-  australia: 'AUD',
+  // 'united states': 'USD',
+  // 'united kingdom': 'GBP',
+  // canada: 'CAD',
+  // india: 'INR',
+  // australia: 'AUD',
 };
 
 const currencyJsonInflightByBase = new Map<string, Promise<Record<string, unknown> | null>>();
