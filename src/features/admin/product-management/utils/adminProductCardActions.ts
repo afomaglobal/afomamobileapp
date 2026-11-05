@@ -20,7 +20,24 @@ export function buildAdminProductCardActions(product: AdminProductListItem): Adm
     { id: 'view', label: 'View' },
     { id: 'edit', label: 'Edit', disabled: !canEdit },
     { id: 'preview', label: 'Preview', disabled: !canPreview },
+    { id: 'changeApprovalStatus', label: 'Change approval status' },
     { id: 'duplicate', label: 'Duplicate', disabled: !canDuplicate },
+  ];
+}
+
+export function buildAdminProductApprovalActions(
+  product: AdminProductListItem,
+): AdminProductCardAction[] {
+  return [
+    { id: 'approvalPending', label: 'Pending', disabled: product.productStatus === 'Pending' },
+    { id: 'approvalReview', label: 'In Review', disabled: product.productStatus === 'Review' },
+    { id: 'approvalApproved', label: 'Approved', disabled: product.productStatus === 'Approved' },
+    {
+      id: 'approvalDisapproved',
+      label: 'Disapproved',
+      disabled: product.productStatus === 'Disapproved',
+    },
+    { id: 'approvalDraft', label: 'Draft', disabled: product.productStatus === 'Draft' },
   ];
 }
 

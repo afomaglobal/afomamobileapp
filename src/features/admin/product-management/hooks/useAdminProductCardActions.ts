@@ -6,11 +6,16 @@ import { getErrorMessage } from '../../../../services/api/errors';
 import type { AdminStackParamList } from '../../navigation/adminTypes';
 import {
   deleteAdminProduct,
+  updateAdminProductApprovalStatus,
   updateAdminProductsStoreVisibility,
 } from '../api/adminProductManagementApi';
 import type { AdminProductCardActionId } from '../components/AdminProductCardActionsMenu';
 import type { AdminProductListItem } from '../types/adminProductManagement';
-import { buildAdminProductCardActions } from '../utils/adminProductCardActions';
+import type { AdminProductApprovalStatus } from '../types/adminProductOperations';
+import {
+  buildAdminProductApprovalActions,
+  buildAdminProductCardActions,
+} from '../utils/adminProductCardActions';
 import { getAdminDuplicateValidationMessage, validateAdminProductDuplicatable } from '../utils/adminProductDuplicatePayload';
 import { navigateToAdminProductMobilePreview } from '../utils/adminProductPreviewNavigation';
 import {
@@ -19,7 +24,14 @@ import {
 } from '../utils/adminProductWriteNavigation';
 import { useAdminDuplicateProduct } from './useAdminDuplicateProduct';
 import { requestAdminProductListRefresh } from '../state/adminProductListRefresh';
-import { clearAdminProductSessionPatch } from '../state/adminProductSessionPatch';
+import {
+  clearAdminProductSessionPatch,
+  setAdminProductSessionPatch,
+} from '../state/adminProductSessionPatch';
+import {
+  patchAdminProductApproval,
+  toAdminProductListPatch,
+} from '../utils/adminProductOperations';
 
 type AdminNavigation = NativeStackNavigationProp<AdminStackParamList>;
 
@@ -28,6 +40,7 @@ export function useAdminProductCardActions(
   onListChanged: () => void,
 ) {
   const [menuProduct, setMenuProduct] = useState<AdminProductListItem | null>(null);
+  const [approvalMenuProduct, setApprovalMenuProduct] = useState<AdminProductListItem | null>(null);
   const [busyProductId, setBusyProductId] = useState<string | null>(null);
   const { duplicateProduct, isDuplicating } = useAdminDuplicateProduct();
 
@@ -37,6 +50,10 @@ export function useAdminProductCardActions(
 
   const closeMenu = useCallback(() => {
     setMenuProduct(null);
+  }, []);
+
+  const closeApprovalMenu = useCallback(() => {
+    setApprovalMenuProduct(null);
   }, []);
 
   const runWithBusy = useCallback(
@@ -96,6 +113,31 @@ export function useAdminProductCardActions(
           onListChanged();
         } catch (err) {
           Alert.alert('Update failed', getErrorMessage(err, 'Failed to update product visibility'));
+        }
+      });
+    },
+    [onListChanged, runWithBusy],
+  );
+
+  const handleApprovalStatusChange = useCallback(
+    (product: AdminProductListItem, productStatus: AdminProductApprovalStatus) => {
+      const productId = product._id;
+      if (!productId || product.productStatus === productStatus) {
+        return;
+      }
+
+      void runWithBusy(productId, async () => {
+        try {
+          await updateAdminProductApprovalStatus(productId, productStatus);
+          const updatedProduct = patchAdminProductApproval(product, productStatus);
+          setAdminProductSessionPatch(productId, toAdminProductListPatch(updatedProduct));
+          requestAdminProductListRefresh();
+          onListChanged();
+        } catch (err) {
+          Alert.alert(
+            'Update failed',
+            getErrorMessage(err, 'Failed to update product approval status'),
+          );
         }
       });
     },
@@ -188,6 +230,9 @@ export function useAdminProductCardActions(
       }
 
       switch (actionId) {
+        case 'changeApprovalStatus':
+          setApprovalMenuProduct(product);
+          break;
         case 'view':
           handleView(product);
           break;
@@ -225,14 +270,45 @@ export function useAdminProductCardActions(
     ],
   );
 
+  const handleApprovalMenuAction = useCallback(
+    (actionId: AdminProductCardActionId) => {
+      const product = approvalMenuProduct;
+      closeApprovalMenu();
+
+      if (!product) {
+        return;
+      }
+
+      const statusByAction: Partial<Record<AdminProductCardActionId, AdminProductApprovalStatus>> = {
+        approvalPending: 'Pending',
+        approvalReview: 'Review',
+        approvalApproved: 'Approved',
+        approvalDisapproved: 'Disapproved',
+        approvalDraft: 'Draft',
+      };
+      const nextStatus = statusByAction[actionId];
+      if (nextStatus) {
+        handleApprovalStatusChange(product, nextStatus);
+      }
+    },
+    [approvalMenuProduct, closeApprovalMenu, handleApprovalStatusChange],
+  );
+
   const menuActions = menuProduct ? buildAdminProductCardActions(menuProduct) : [];
+  const approvalMenuActions = approvalMenuProduct
+    ? buildAdminProductApprovalActions(approvalMenuProduct)
+    : [];
 
   return {
     menuProduct,
+    approvalMenuProduct,
     menuActions,
+    approvalMenuActions,
     openMenu,
     closeMenu,
+    closeApprovalMenu,
     handleMenuAction,
+    handleApprovalMenuAction,
     handleView,
     busyProductId,
   };
