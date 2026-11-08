@@ -23,7 +23,6 @@ export interface RegisterBuyerPayload {
   stateCode: string;
   referral_source: string;
   social_media: string;
-  web3address?: string;
 }
 
 export interface RegisterSellerPayload {
@@ -48,7 +47,6 @@ export interface RegisterSellerPayload {
   social_media_handle: string;
   membershipTier?: SellerMembershipTierId;
   billingCycle?: SellerBillingCycle;
-  web3address?: string;
 }
 
 interface SellerReferralRecord {
