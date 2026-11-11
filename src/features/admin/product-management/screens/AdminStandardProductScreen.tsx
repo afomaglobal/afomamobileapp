@@ -9,7 +9,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { ErrorState } from '../../../../components/ecommerce/ErrorState';
 import {
-  ExpandableProductNameText,
   KeyboardAwareFormScreen,
   MetaDescriptionInput,
   MetaKeywordsInput,
@@ -368,53 +367,41 @@ export function AdminStandardProductScreen({ navigation, route }: Props) {
         return (
           <View style={styles.stepContent}>
             <AppInput tone="surface"
-              label="Commodity code"
+              label="Commodity code *"
               value={wizard.values.commodityCode}
               onChangeText={(text) => wizard.updateField('commodityCode', text)}
-              placeholder="Optional HS code"
+              placeholder="Enter HS code"
+              error={wizard.fieldErrors.commodityCode}
             />
             <MetaTitleInput
+              label="Meta title *"
               value={wizard.values.metaTitle}
               onChangeText={(text) => wizard.updateField('metaTitle', text)}
+              placeholder="Enter SEO title"
+              error={wizard.fieldErrors.metaTitle}
             />
             <MetaKeywordsInput
+              label="Meta keywords *"
               value={wizard.values.metaKeywords}
               onChangeText={(text) => wizard.updateField('metaKeywords', text)}
+              placeholder="Enter keywords"
+              error={wizard.fieldErrors.metaKeywords}
             />
             <MetaDescriptionInput
+              label="Meta description *"
               value={wizard.values.metaDesc}
               onChangeText={(text) => wizard.updateField('metaDesc', text)}
+              placeholder="Enter SEO description"
+              error={wizard.fieldErrors.metaDesc}
             />
             <AppInput tone="surface"
-              label="Discount (%)"
+              label="Discount (%) *"
               value={wizard.values.discountCode}
               onChangeText={(text) => wizard.updateField('discountCode', text)}
-              placeholder="Optional discount percentage"
+              placeholder="Enter discount percentage"
               keyboardType="number-pad"
+              error={wizard.fieldErrors.discountCode}
             />
-          </View>
-        );
-
-      case 'review':
-        return (
-          <View style={styles.stepContent}>
-            <AppText variant="bodyMedium" style={styles.reviewTitle}>
-              Review product
-            </AppText>
-            <ExpandableProductNameText label="Name" value={wizard.values.productName} />
-            <AppText variant="bodySmall" color="textSecondary">
-              Category: {wizard.values.categoryId ? 'Selected' : '—'}
-            </AppText>
-            <AppText variant="bodySmall" color="textSecondary">
-              Images: {wizard.uploadedImageCount}
-            </AppText>
-            <AppText variant="bodySmall" color="textSecondary">
-              Price (CAD): {wizard.values.price || '—'}
-            </AppText>
-            <AppText variant="bodySmall" color="textSecondary">
-              Inventory: {wizard.values.inventory || '—'} / Qty {wizard.values.quantity || '—'}
-            </AppText>
-
             {wizard.saveSuccessMessage ? (
               <AppCard variant="muted">
                 <AppText variant="bodySmall" color="success">
@@ -476,16 +463,14 @@ export function AdminStandardProductScreen({ navigation, route }: Props) {
           {renderStep()}
         </AppCard>
 
-        {wizard.currentStep.id !== 'review' ? (
-          <View style={styles.footerActions}>
-            {!wizard.isFirstStep ? (
-              <AppButton label="Back" variant="outline" onPress={wizard.goBack} style={styles.footerButton} />
-            ) : null}
-            {!wizard.isLastStep ? (
-              <AppButton label="Next" onPress={wizard.goNext} style={styles.footerButton} />
-            ) : null}
-          </View>
-        ) : null}
+        <View style={styles.footerActions}>
+          {!wizard.isFirstStep ? (
+            <AppButton label="Back" variant="outline" onPress={wizard.goBack} style={styles.footerButton} />
+          ) : null}
+          {!wizard.isLastStep ? (
+            <AppButton label="Next" onPress={wizard.goNext} style={styles.footerButton} />
+          ) : null}
+        </View>
     </KeyboardAwareFormScreen>
   );
 }
@@ -548,9 +533,5 @@ const styles = StyleSheet.create({
   },
   inlineError: {
     marginHorizontal: 0,
-  },
-  reviewTitle: {
-    fontWeight: '700',
-    color: colors.textPrimary,
   },
 });

@@ -5,6 +5,7 @@ import { AppText } from '../../../../components/ui/AppText';
 import { colors, radius, spacing } from '../../../../design-system';
 
 export type SellerProductCardActionId =
+  | 'preview'
   | 'edit'
   | 'submitForReview'
   | 'activate'

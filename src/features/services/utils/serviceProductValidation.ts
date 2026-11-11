@@ -61,6 +61,15 @@ export function validateServiceProductStep(
       if (values.currency !== 'cad' && !values.currencyPrice.trim()) {
         errors.currencyPrice = 'Required';
       }
+      if (!values.metaTitle.trim()) {
+        errors.metaTitle = 'Required';
+      }
+      if (!values.metaKeywords.trim()) {
+        errors.metaKeywords = 'Required';
+      }
+      if (!values.metaDesc.trim()) {
+        errors.metaDesc = 'Required';
+      }
       break;
     }
     case 'review':

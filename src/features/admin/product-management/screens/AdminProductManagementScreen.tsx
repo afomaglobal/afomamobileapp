@@ -123,10 +123,14 @@ export function AdminProductManagementScreen({ navigation, route }: Props) {
 
   const {
     menuProduct,
+    approvalMenuProduct,
     menuActions,
+    approvalMenuActions,
     openMenu,
     closeMenu,
+    closeApprovalMenu,
     handleMenuAction,
+    handleApprovalMenuAction,
     handleView,
     busyProductId,
   } = useAdminProductCardActions(navigation, () => {
@@ -381,11 +385,18 @@ export function AdminProductManagementScreen({ navigation, route }: Props) {
       </Pressable>
 
       <AdminProductCardActionsMenu
-        visible={Boolean(menuProduct)}
-        productName={menuProduct?.productName?.trim() || 'Untitled product'}
-        actions={menuActions}
-        onClose={closeMenu}
-        onSelect={handleMenuAction}
+        visible={Boolean(menuProduct || approvalMenuProduct)}
+        productName={
+          approvalMenuProduct?.productName?.trim() ||
+          menuProduct?.productName?.trim() ||
+          'Untitled product'
+        }
+        actions={approvalMenuProduct ? approvalMenuActions : menuActions}
+        onClose={() => {
+          closeMenu();
+          closeApprovalMenu();
+        }}
+        onSelect={approvalMenuProduct ? handleApprovalMenuAction : handleMenuAction}
       />
     </>
   );

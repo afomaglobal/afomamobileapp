@@ -44,6 +44,26 @@ function validateShippingExtras(values: StandardProductFormValues): Record<strin
   return errors;
 }
 
+function validateAdditionalFields(values: StandardProductFormValues): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  for (const field of ['commodityCode', 'metaTitle', 'metaKeywords', 'metaDesc'] as const) {
+    const fieldError = required(values[field]);
+    if (fieldError) {
+      errors[field] = fieldError;
+    }
+  }
+
+  const discount = values.discountCode.trim();
+  if (!discount) {
+    errors.discountCode = 'Required';
+  } else if (!NUMERIC_PATTERN.test(discount) || Number(discount) <= 0) {
+    errors.discountCode = 'Enter a percentage greater than 0';
+  }
+
+  return errors;
+}
+
 export function validateStandardProductStep(
   step: StandardWizardStepId,
   values: StandardProductFormValues,
@@ -125,10 +145,8 @@ export function validateStandardProductStep(
     }
 
     case 'additional':
+      Object.assign(errors, validateAdditionalFields(values));
       break;
-
-    case 'review':
-      return validateStandardProductForm(values, images);
 
     default:
       break;
@@ -147,6 +165,7 @@ export function validateStandardProductForm(
     'images',
     'pricing',
     'shipping',
+    'additional',
   ];
 
   return steps.reduce<Record<string, string>>((accumulator, step) => {

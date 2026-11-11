@@ -12,7 +12,13 @@ export type AdminProductCardActionId =
   | 'edit'
   | 'editVariations'
   | 'preview'
-  | 'duplicate';
+  | 'duplicate'
+  | 'changeApprovalStatus'
+  | 'approvalPending'
+  | 'approvalReview'
+  | 'approvalApproved'
+  | 'approvalDisapproved'
+  | 'approvalDraft';
 
 export interface AdminProductCardAction {
   id: AdminProductCardActionId;

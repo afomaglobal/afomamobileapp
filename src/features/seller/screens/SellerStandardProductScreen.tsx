@@ -10,7 +10,6 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { ErrorState } from '../../../components/ecommerce/ErrorState';
 import {
-  ExpandableProductNameText,
   KeyboardAwareFormScreen,
   MetaDescriptionInput,
   MetaKeywordsInput,
@@ -93,10 +92,7 @@ export function SellerStandardProductScreen({ navigation, route }: Props) {
   };
 
   const handleSave = async () => {
-    const productId = await wizard.saveProduct();
-    if (productId) {
-      wizard.goToStep('review');
-    }
+    await wizard.saveProduct();
   };
 
   const handleSubmitForReview = async () => {
@@ -376,57 +372,45 @@ export function SellerStandardProductScreen({ navigation, route }: Props) {
           </View>
         );
 
-      case 'additional':
-        return (
-          <View style={styles.stepContent}>
-            <AppInput tone="surface"
-              label="Commodity code"
-              value={wizard.values.commodityCode}
-              onChangeText={(text) => wizard.updateField('commodityCode', text)}
-              placeholder="Optional HS code"
-            />
-            <MetaTitleInput
-              value={wizard.values.metaTitle}
-              onChangeText={(text) => wizard.updateField('metaTitle', text)}
-            />
-            <MetaKeywordsInput
-              value={wizard.values.metaKeywords}
-              onChangeText={(text) => wizard.updateField('metaKeywords', text)}
-            />
-            <MetaDescriptionInput
-              value={wizard.values.metaDesc}
-              onChangeText={(text) => wizard.updateField('metaDesc', text)}
-            />
-            <AppInput tone="surface"
-              label="Discount (%)"
-              value={wizard.values.discountCode}
-              onChangeText={(text) => wizard.updateField('discountCode', text)}
-              placeholder="Optional discount percentage"
-              keyboardType="number-pad"
-            />
-          </View>
-        );
-
-      case 'review':
-        return (
-          <View style={styles.stepContent}>
-            <AppText variant="bodyMedium" style={styles.reviewTitle}>
-              Review product
-            </AppText>
-            <ExpandableProductNameText label="Name" value={wizard.values.productName} />
-            <AppText variant="bodySmall" color="textSecondary">
-              Category: {wizard.values.categoryId ? 'Selected' : '—'}
-            </AppText>
-            <AppText variant="bodySmall" color="textSecondary">
-              Images: {wizard.uploadedImageCount}
-            </AppText>
-            <AppText variant="bodySmall" color="textSecondary">
-              Price (CAD): {wizard.values.price || '—'}
-            </AppText>
-            <AppText variant="bodySmall" color="textSecondary">
-              Inventory: {wizard.values.inventory || '—'} / Qty {wizard.values.quantity || '—'}
-            </AppText>
-
+       case 'additional':
+         return (
+           <View style={styles.stepContent}>
+             <AppInput tone="surface"
+               label="Commodity code *"
+               value={wizard.values.commodityCode}
+               onChangeText={(text) => wizard.updateField('commodityCode', text)}
+               placeholder="Enter HS code"
+               error={wizard.fieldErrors.commodityCode}
+             />
+             <MetaTitleInput
+               label="Meta title *"
+               value={wizard.values.metaTitle}
+               onChangeText={(text) => wizard.updateField('metaTitle', text)}
+               placeholder="Enter SEO title"
+               error={wizard.fieldErrors.metaTitle}
+             />
+             <MetaKeywordsInput
+               label="Meta keywords *"
+               value={wizard.values.metaKeywords}
+               onChangeText={(text) => wizard.updateField('metaKeywords', text)}
+               placeholder="Enter keywords"
+               error={wizard.fieldErrors.metaKeywords}
+             />
+             <MetaDescriptionInput
+               label="Meta description *"
+               value={wizard.values.metaDesc}
+               onChangeText={(text) => wizard.updateField('metaDesc', text)}
+               placeholder="Enter SEO description"
+               error={wizard.fieldErrors.metaDesc}
+             />
+             <AppInput tone="surface"
+               label="Discount (%) *"
+               value={wizard.values.discountCode}
+               onChangeText={(text) => wizard.updateField('discountCode', text)}
+               placeholder="Enter discount percentage"
+               keyboardType="number-pad"
+               error={wizard.fieldErrors.discountCode}
+             />
             {wizard.saveSuccessMessage ? (
               <AppCard variant="muted">
                 <AppText variant="bodySmall" color="success">
@@ -499,16 +483,14 @@ export function SellerStandardProductScreen({ navigation, route }: Props) {
           {renderStep()}
         </AppCard>
 
-        {wizard.currentStep.id !== 'review' ? (
-          <View style={styles.footerActions}>
-            {!wizard.isFirstStep ? (
-              <AppButton label="Back" variant="outline" onPress={wizard.goBack} style={styles.footerButton} />
-            ) : null}
-            {!wizard.isLastStep ? (
-              <AppButton label="Next" onPress={wizard.goNext} style={styles.footerButton} />
-            ) : null}
-          </View>
-        ) : null}
+        <View style={styles.footerActions}>
+          {!wizard.isFirstStep ? (
+            <AppButton label="Back" variant="outline" onPress={wizard.goBack} style={styles.footerButton} />
+          ) : null}
+          {!wizard.isLastStep ? (
+            <AppButton label="Next" onPress={wizard.goNext} style={styles.footerButton} />
+          ) : null}
+        </View>
     </KeyboardAwareFormScreen>
     <ListingFeePaymentModal {...wizard.listingFeeModalProps} />
     </>
@@ -573,9 +555,5 @@ const styles = StyleSheet.create({
   },
   inlineError: {
     marginHorizontal: 0,
-  },
-  reviewTitle: {
-    fontWeight: '700',
-    color: colors.textPrimary,
   },
 });

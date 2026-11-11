@@ -642,16 +642,16 @@ export function buildCurrencyOnlySavePayload(params: {
 
 /** Fallback when the currency catalog API is unavailable. */
 export const SHIPPING_CURRENCY_OPTIONS: SelectOption[] = [
-  { label: 'CAD — Canadian Dollar', value: 'cad' },
-  { label: 'USD — US Dollar', value: 'usd' },
-  { label: 'EUR — Euro', value: 'eur' },
-  { label: 'GBP — British Pound', value: 'gbp' },
+  // { label: 'CAD — Canadian Dollar', value: 'cad' },
+  // { label: 'USD — US Dollar', value: 'usd' },
+  // { label: 'EUR — Euro', value: 'eur' },
+  // { label: 'GBP — British Pound', value: 'gbp' },
   { label: 'NGN — Nigerian Naira', value: 'ngn' },
 ];
 
 function formatCurrencyCatalogLabel(code: string, entry: unknown): string {
   const upper = code.toUpperCase();
-
+  
   if (typeof entry === 'string' && entry.trim()) {
     return `${upper} — ${entry.trim()}`;
   }
@@ -662,7 +662,6 @@ function formatCurrencyCatalogLabel(code: string, entry: unknown): string {
       return `${upper} — ${name}`;
     }
   }
-
   return upper;
 }
 
@@ -689,6 +688,7 @@ export async function fetchShippingCurrencyOptions(): Promise<SelectOption[]> {
       const data = (await response.json()) as Record<string, unknown>;
 
       return Object.keys(data)
+        .filter((code) => code.toUpperCase() === 'NGN')   // ← only NGN
         .sort((left, right) => left.localeCompare(right))
         .map((code) => ({
           value: code.toLowerCase(),

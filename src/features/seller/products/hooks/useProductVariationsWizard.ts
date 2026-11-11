@@ -76,7 +76,7 @@ function inferAttributesFromVariations(variations: ProductVariation[]): string[]
 export function useProductVariationsWizard(sellerId?: string, productId?: string) {
   const [productName, setProductName] = useState('');
   const [productStatus, setProductStatus] = useState<string | undefined>();
-  const [productCurrency, setProductCurrency] = useState('cad');
+  const [productCurrency, setProductCurrency] = useState('ngn');
   const [productImages, setProductImages] = useState<Array<{ imageUrl?: string; altText?: string }>>(
     [],
   );
@@ -130,7 +130,7 @@ export function useProductVariationsWizard(sellerId?: string, productId?: string
 
         setProductName(product.productName ?? '');
         setProductStatus(product.productStatus);
-        setProductCurrency(product.currency ?? 'cad');
+        setProductCurrency(product.currency ?? 'ngn');
         setProductImages(product.images ?? []);
         setAvailableAttributes(attributes);
 

@@ -42,7 +42,7 @@ export function buildDownloadableProductPayload(
       })),
     videos: [],
     productType: 'Downloadable',
-    currency: values.currency || 'cad',
+    currency: values.currency || 'ngn',
     currencyPrice: values.currencyPrice.trim() ? values.currencyPrice.trim() : 1,
     currencyRate: currencyRate || 1,
     downloadableLink: {
