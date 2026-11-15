@@ -1,9 +1,5 @@
 import { useState } from 'react';
-import {
-  ShippingRatesLoading,
-  ShippingRatesLoadingBadge,
-} from './ShippingRatesLoading';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { AppButton } from '../../../components/ui/AppButton';
@@ -79,6 +75,18 @@ function SelectedShippingMethodOption({
   );
 }
 
+/** One plain, visible status line — replaces the old truck animation / header spinner. */
+function ShippingStatusLine({ label }: { label: string }) {
+  return (
+    <View style={styles.statusLine} accessibilityRole="progressbar" accessibilityLabel={label}>
+      <ActivityIndicator size="small" color={colors.primary} />
+      <AppText variant="bodySmall" color="textSecondary" style={styles.statusText} numberOfLines={2}>
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
 export function CartShippingDetailsCard({
   isAuthenticated,
   isLoadingAuthAddress = false,
@@ -99,11 +107,14 @@ export function CartShippingDetailsCard({
 
   if (isLoadingAuthAddress) {
     return (
-      <CheckoutSurfaceCard style={styles.loadingCard}>
-        <ShippingRatesLoading />
-        <AppText variant="bodySmall" color="textSecondary">
-          Loading delivery address...
-        </AppText>
+      <CheckoutSurfaceCard style={styles.card}>
+        <View style={styles.cardTitleLeft}>
+          <Ionicons name="car-outline" size={20} color={colors.primary} />
+          <AppText variant="bodyMedium" style={styles.cardTitle}>
+            Shipping details
+          </AppText>
+        </View>
+        <ShippingStatusLine label="Loading your delivery address…" />
       </CheckoutSurfaceCard>
     );
   }
@@ -132,7 +143,21 @@ export function CartShippingDetailsCard({
   const totalOptionCount = groups.reduce((sum, group) => sum + group.options.length, 0);
   const hasLoadedMethods = groups.length > 0 || selectedOptions.length > 0;
   const showInitialMethodLoading = isLoading && !hasLoadedMethods;
-  const canChangeMethod = !error && totalOptionCount > 0;
+  const canChangeMethod = !error && totalOptionCount > 0 && !isLoading;
+  const isFetching = isLoading || isRefreshingRates;
+  const destination = shippingAddress.city.trim() || shippingAddress.zip.trim();
+  const fetchingLabel = hasLoadedMethods
+    ? 'Updating shipping rates…'
+    : destination
+      ? `Getting carrier rates for ${destination}…`
+      : 'Getting carrier rates…';
+  const selectedShippingTotal = selectedOptions.reduce((sum, option) => sum + option.rate, 0);
+  const collapsedSummary =
+    !isFetching && !error && selectedOptions.length > 0
+      ? selectedShippingTotal <= 0
+        ? 'Free'
+        : formatProductPrice(selectedShippingTotal, currency)
+      : null;
 
   return (
     <CheckoutSurfaceCard style={styles.card}>
@@ -146,14 +171,35 @@ export function CartShippingDetailsCard({
           <AppText variant="bodyMedium" style={styles.cardTitle}>
             Shipping details
           </AppText>
-          {isLoading || isRefreshingRates ? <ShippingRatesLoadingBadge /> : null}
         </View>
-        <Ionicons
-          name={expanded ? 'chevron-up' : 'chevron-down'}
-          size={18}
-          color={colors.textMuted}
-        />
+        <View style={styles.cardTitleRight}>
+          {!expanded && collapsedSummary ? (
+            <AppText variant="bodyMedium" style={styles.collapsedSummary}>
+              {collapsedSummary}
+            </AppText>
+          ) : null}
+          <Ionicons
+            name={expanded ? 'chevron-up' : 'chevron-down'}
+            size={18}
+            color={colors.textMuted}
+          />
+        </View>
       </Pressable>
+
+      {isFetching ? <ShippingStatusLine label={fetchingLabel} /> : null}
+
+      {!expanded && !isFetching && error ? (
+        <View style={styles.inlineState}>
+          <AppText variant="bodySmall" color="error">
+            {error}
+          </AppText>
+          <Pressable accessibilityRole="button" onPress={onRetry}>
+            <AppText variant="bodyMedium" color="textLink">
+              Try again
+            </AppText>
+          </Pressable>
+        </View>
+      ) : null}
 
       {expanded ? (
         <View style={styles.body}>
@@ -190,9 +236,7 @@ export function CartShippingDetailsCard({
               ) : null}
             </View>
 
-            {showInitialMethodLoading ? (
-              <ShippingRatesLoading />
-            ) : error ? (
+            {showInitialMethodLoading ? null : error ? (
               <View style={styles.inlineState}>
                 <AppText variant="bodySmall" color="error">
                   {error}
@@ -204,7 +248,7 @@ export function CartShippingDetailsCard({
                 </Pressable>
               </View>
             ) : selectedOptions.length > 0 ? (
-              <View style={styles.methodList}>
+              <View style={[styles.methodList, isFetching && styles.stale]}>
                 {selectedOptions.map((option) => (
                   <SelectedShippingMethodOption
                     key={option.id}
@@ -235,9 +279,31 @@ const styles = StyleSheet.create({
   card: {
     gap: spacing.md,
   },
-  loadingCard: {
+  statusLine: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.medium,
+    backgroundColor: colors.primarySoft,
+  },
+  statusText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  cardTitleRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexShrink: 0,
+  },
+  collapsedSummary: {
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  stale: {
+    opacity: 0.5,
   },
   gateCard: {
     gap: spacing.md,
@@ -254,6 +320,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    flex: 1,
+    minWidth: 0,
   },
   cardTitle: {
     fontWeight: '700',

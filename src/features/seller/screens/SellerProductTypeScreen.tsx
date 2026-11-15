@@ -64,7 +64,8 @@ export function SellerProductTypeScreen({ navigation, route }: Props) {
       return;
     }
 
-    void navigateToSellerNewListingCreate(navigation, 'Downloadable', sellerId);
+    // Digital (downloadable) products are not created or sold in the mobile apps
+    // (App Store 3.1.1 / Play payments policy); sellers manage them on the website.
   };
 
   if (!isAuthorized) {
@@ -108,7 +109,7 @@ export function SellerProductTypeScreen({ navigation, route }: Props) {
           </AppText>
           <AppText variant="bodySmall" color="textSecondary">
             {createMode === 'products'
-              ? 'Choose physical or digital format.'
+              ? 'Choose the type of product you want to list.'
               : 'Choose the type of product you want to list.'}
           </AppText>
         </View>
@@ -120,15 +121,6 @@ export function SellerProductTypeScreen({ navigation, route }: Props) {
             selected={category === 'physical'}
             onPress={() => setCategory('physical')}
             icon={<Ionicons name="cube-outline" size={24} color={colors.textInverse} />}
-          />
-
-          <AdminListingOptionCard
-            title="Digital product"
-            description="Downloadable files and digital goods."
-            selected={category === 'digital'}
-            onPress={() => setCategory('digital')}
-            iconBackgroundColor={colors.secondary}
-            icon={<Ionicons name="cloud-download-outline" size={24} color={colors.textInverse} />}
           />
 
           {createMode !== 'products' ? (

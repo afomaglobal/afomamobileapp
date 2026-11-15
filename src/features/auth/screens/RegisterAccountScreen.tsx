@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { CountryStateFields } from '../../../components/forms';
@@ -8,7 +8,7 @@ import { AppInput } from '../../../components/ui/AppInput';
 import { AppText } from '../../../components/ui/AppText';
 import type { AuthStackParamList } from '../../../app/navigation/types';
 import { ApiError } from '../../../services/api/errors';
-import { spacing } from '../../../design-system';
+import { colors, radius, spacing } from '../../../design-system';
 import {
   buildSellerReferralId,
   registerBuyer,
@@ -26,22 +26,13 @@ import {
 } from '../types/registration';
 import { useRegistrationCountryOptions } from '../utils/registrationCountries';
 import { validateRegistrationForm } from '../utils/registrationValidation';
-import { SellerRegistrationPlanPicker } from '../../seller/membership/components/SellerRegistrationPlanPicker';
-import type { SellerBillingCycle, SellerMembershipTierId } from '../../seller/membership/types/sellerMembership';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'RegisterAccount'>;
 
 export function RegisterAccountScreen({ navigation, route }: Props) {
-  const { accountType, membershipTier: initialTier, billingCycle: initialCycle } = route.params;
+  const { accountType } = route.params;
   const isSeller = accountType === 'seller';
   const countryOptions = useRegistrationCountryOptions();
-
-  const [membershipTier, setMembershipTier] = useState<SellerMembershipTierId>(
-    initialTier ?? 'test_drive',
-  );
-  const [billingCycle, setBillingCycle] = useState<SellerBillingCycle>(
-    initialCycle ?? 'none',
-  );
 
   const [values, setValues] = useState<RegistrationFormValues>(createEmptyRegistrationFormValues);
   const [fieldErrors, setFieldErrors] = useState<RegistrationFormErrors>({});
@@ -91,7 +82,7 @@ export function RegisterAccountScreen({ navigation, route }: Props) {
 
     try {
       if (isSeller) {
-        const response = await registerSeller({
+        await registerSeller({
           enableProduct: false,
           firstName: values.firstName.trim(),
           lastName: values.lastName.trim(),
@@ -111,20 +102,9 @@ export function RegisterAccountScreen({ navigation, route }: Props) {
           referral_id: buildSellerReferralId(values.referralSource, values.referralId),
           social_media: values.socialMedia,
           social_media_handle: values.socialMediaHandle.trim(),
-          membershipTier,
-          billingCycle,
         });
 
-        if (response.membership?.requiresPayment && response.sellerData?._id) {
-          navigation.replace('SellerMembershipCheckout', {
-            sellerId: response.sellerData._id,
-            membershipTier,
-            billingCycle,
-            email: values.email.trim(),
-          });
-          return;
-        }
-
+        // New sellers start on a free trial; no plan choice or payment happens in the app.
         navigation.replace('RegistrationSuccess', { accountType: 'seller' });
         return;
       } else {
@@ -291,14 +271,12 @@ export function RegisterAccountScreen({ navigation, route }: Props) {
       />
 
       {isSeller ? (
-        <SellerRegistrationPlanPicker
-          country={values.country}
-          membershipTier={membershipTier}
-          billingCycle={billingCycle}
-          onTierChange={setMembershipTier}
-          onBillingCycleChange={setBillingCycle}
-          disabled={loading}
-        />
+        <View style={styles.trialNote}>
+          <AppText variant="label">5-day free trial</AppText>
+          <AppText variant="bodySmall" color="textSecondary">
+            New seller accounts include a 5-day free trial with up to 5 active products.
+          </AppText>
+        </View>
       ) : null}
 
       <RegistrationAgreeField
@@ -326,5 +304,13 @@ export function RegisterAccountScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   signInLink: {
     textAlign: 'center',
+  },
+  trialNote: {
+    gap: spacing.xs,
+    padding: spacing.md,
+    borderRadius: radius.large,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.primarySoft,
   },
 });

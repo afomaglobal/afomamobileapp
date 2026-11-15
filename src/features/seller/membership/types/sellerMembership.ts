@@ -73,6 +73,16 @@ export interface SellerMembershipSummary {
   requiresPayment: boolean;
   isSubscriptionActive: boolean;
   status: string;
+  /** AFOMA free trial (backend utils/sellerTrial.js). */
+  isOnTrial?: boolean;
+  trialStartedAt?: string | null;
+  trialEndsAt?: string | null;
+  trialDaysLeft?: number;
+  trialMaxActiveProducts?: number;
+  /** Selling paused after the trial ended without a plan: listings hidden from buyers. */
+  sellingPaused?: boolean;
+  sellingPausedAt?: string | null;
+  planMaxActiveProducts?: number | null;
   wallet: {
     balanceCad: number;
     balanceLocal?: number;

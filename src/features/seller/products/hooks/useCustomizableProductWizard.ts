@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { getErrorMessage } from '../../../../services/api/errors';
-import { useListingFeePayment } from '../../membership/hooks/useListingFeePayment';
 import {
   getSellerProductById,
   updateProduct,
@@ -48,7 +47,6 @@ export function useCustomizableProductWizard(sellerId?: string, productId?: stri
     updateImageAltText,
     imageUploadSheetProps,
   } = useProductImages();
-  const listingFeePayment = useListingFeePayment(sellerId);
   const [stepIndex, setStepIndex] = useState(0);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [savedProductId, setSavedProductId] = useState<string | null>(productId ?? null);
@@ -212,7 +210,7 @@ export function useCustomizableProductWizard(sellerId?: string, productId?: stri
 
       const product = editId
         ? await updateProduct(editId, payload)
-        : await createProductWithTierGate(payload, listingFeePayment.requestListingFeePayment);
+        : await createProductWithTierGate(payload);
       const nextProductId = product._id;
 
       if (!nextProductId) {
@@ -246,7 +244,6 @@ export function useCustomizableProductWizard(sellerId?: string, productId?: stri
     savedProductId,
     sellerId,
     uploadPendingImages,
-    listingFeePayment.requestListingFeePayment,
     values,
   ]);
 
@@ -281,6 +278,5 @@ export function useCustomizableProductWizard(sellerId?: string, productId?: stri
     imageUploadSheetProps,
     saveProduct,
     setSaveError,
-    listingFeeModalProps: listingFeePayment.modalProps,
   };
 }

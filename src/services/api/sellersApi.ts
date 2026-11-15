@@ -5,6 +5,7 @@ import type { Review } from '../types/review';
 import type { PaginationParams } from '../types/common';
 import { apiClient } from './client';
 import { apiGet, apiPost, apiPut } from './request';
+import { excludeHiddenProducts } from '../../features/products/utils/mobileCatalogPolicy';
 import { toApiError } from './errors';
 import { resolveUserProfileImageUrl } from '../../utils/resolveUserProfileImageUrl';
 
@@ -149,11 +150,13 @@ export async function getSellerStoreProducts(
   sellerId: string,
   params: PaginationParams = {},
 ): Promise<Product[]> {
-  return apiGet<Product[]>(
+  const data = await apiGet<Product[] | { products?: Product[] }>(
     `/products/by/${encodeURIComponent(sellerId)}`,
     { params },
     'Failed to load seller store products',
   );
+  // Digital products are not sold in the mobile apps (mobileCatalogPolicy).
+  return excludeHiddenProducts(Array.isArray(data) ? data : data?.products ?? []);
 }
 
 /** GET /reviews/seller/{sellerId} */

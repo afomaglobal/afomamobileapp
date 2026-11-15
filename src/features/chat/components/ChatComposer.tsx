@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { AppText } from '../../../components/ui/AppText';
 import { colors, radius, spacing } from '../../../design-system';
@@ -8,14 +9,59 @@ export interface ChatComposerProps {
   onSend: (text: string) => Promise<boolean>;
   disabled?: boolean;
   isSending?: boolean;
+  /** When set, the composer edits this message instead of sending a new one. */
+  editing?: { messageId: string; text: string } | null;
+  onSaveEdit?: (messageId: string, text: string) => Promise<boolean>;
+  onCancelEdit?: () => void;
 }
 
-export function ChatComposer({ onSend, disabled = false, isSending = false }: ChatComposerProps) {
+export function ChatComposer({
+  onSend,
+  disabled = false,
+  isSending = false,
+  editing = null,
+  onSaveEdit,
+  onCancelEdit,
+}: ChatComposerProps) {
   const [text, setText] = useState('');
+  const [draftBeforeEdit, setDraftBeforeEdit] = useState('');
+  const inputRef = useRef<TextInput>(null);
+  const textRef = useRef(text);
+  textRef.current = text;
+  const isEditing = Boolean(editing);
+
+  useEffect(() => {
+    if (editing) {
+      setDraftBeforeEdit(textRef.current);
+      setText(editing.text);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+    // Only when a different message enters edit mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing?.messageId]);
+
+  const cancelEdit = () => {
+    setText(draftBeforeEdit);
+    setDraftBeforeEdit('');
+    onCancelEdit?.();
+  };
 
   const handleSend = async () => {
     const trimmed = text.trim();
     if (!trimmed || disabled || isSending) {
+      return;
+    }
+
+    if (editing && onSaveEdit) {
+      if (trimmed === editing.text.trim()) {
+        cancelEdit();
+        return;
+      }
+      const saved = await onSaveEdit(editing.messageId, trimmed);
+      if (saved) {
+        setText(draftBeforeEdit);
+        setDraftBeforeEdit('');
+      }
       return;
     }
 
@@ -26,8 +72,26 @@ export function ChatComposer({ onSend, disabled = false, isSending = false }: Ch
   };
 
   return (
+    <View>
+      {isEditing ? (
+        <View style={styles.editBar}>
+          <Ionicons name="create-outline" size={16} color={colors.primary} />
+          <AppText variant="caption" style={styles.editLabel} numberOfLines={1}>
+            Editing message
+          </AppText>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Cancel editing"
+            onPress={cancelEdit}
+            hitSlop={8}
+          >
+            <Ionicons name="close" size={18} color={colors.textMuted} />
+          </Pressable>
+        </View>
+      ) : null}
     <View style={styles.container}>
       <TextInput
+        ref={inputRef}
         value={text}
         onChangeText={setText}
         placeholder="Write a message…"
@@ -38,7 +102,7 @@ export function ChatComposer({ onSend, disabled = false, isSending = false }: Ch
       />
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Send message"
+        accessibilityLabel={isEditing ? 'Save edited message' : 'Send message'}
         onPress={() => {
           void handleSend();
         }}
@@ -53,15 +117,31 @@ export function ChatComposer({ onSend, disabled = false, isSending = false }: Ch
           <ActivityIndicator size="small" color={colors.textInverse} />
         ) : (
           <AppText variant="bodyMedium" style={styles.sendLabel}>
-            Send
+            {isEditing ? 'Save' : 'Send'}
           </AppText>
         )}
       </Pressable>
+    </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  editBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.primarySoft,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  editLabel: {
+    flex: 1,
+    color: colors.primary,
+    fontWeight: '600',
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'flex-end',

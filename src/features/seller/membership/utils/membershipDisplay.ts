@@ -227,3 +227,37 @@ export function buildDowngradeConfirmMessage(
 
   return message;
 }
+
+/**
+ * Neutral plan status for the mobile apps. Plans are managed on the website only, so this
+ * never mentions payment, prices or upgrading (App Store 3.1.1 / Play payments policy).
+ */
+export function formatSellerPlanStatusLabel(
+  membership: Pick<
+    import('../types/sellerMembership').SellerMembershipSummary,
+    'isOnTrial' | 'trialDaysLeft' | 'sellingPaused' | 'isSubscriptionActive' | 'subscriptionStatus'
+  >,
+): string {
+  if (membership.sellingPaused) {
+    return 'Selling paused';
+  }
+  if (membership.isOnTrial) {
+    const days = membership.trialDaysLeft ?? 0;
+    return days > 0 ? `Free trial · ${days} day${days === 1 ? '' : 's'} left` : 'Free trial';
+  }
+  if (membership.isSubscriptionActive) {
+    return 'Active';
+  }
+  return String(membership.subscriptionStatus || '').toLowerCase() === 'past_due' ? 'Past due' : 'Inactive';
+}
+
+export function getSellerPlanStatusTone(
+  membership: Pick<
+    import('../types/sellerMembership').SellerMembershipSummary,
+    'isOnTrial' | 'sellingPaused' | 'isSubscriptionActive'
+  >,
+): SubscriptionStatusTone {
+  if (membership.sellingPaused) return 'danger';
+  if (membership.isOnTrial) return 'warning';
+  return membership.isSubscriptionActive ? 'success' : 'muted';
+}

@@ -182,6 +182,8 @@ export function useCheckoutPayment() {
   const resumePayPalInFlightRef = useRef(false);
   const memoryPendingSessionRef = useRef<PayPalPendingSession | null>(null);
   const pendingPayPalApprovalUrlRef = useRef<string | null>(null);
+  /** The PayPal confirmation currently running; other triggers wait for it instead of starting another. */
+  const payPalCaptureRunRef = useRef<Promise<boolean> | null>(null);
   const captureResultRef = useRef(captureResult);
 
   useEffect(() => {
@@ -250,62 +252,77 @@ export function useCheckoutPayment() {
       returnUrl: string | undefined,
       fallbackSession: PayPalPendingSession | null,
       options?: { quiet?: boolean },
-    ) => {
-      if (captureResultRef.current?.paymentMethod === 'paypal') {
-        memoryPendingSessionRef.current = null;
-        await clearPayPalPendingSession();
-        return true;
+    ): Promise<boolean> => {
+      if (payPalCaptureRunRef.current) {
+        return payPalCaptureRunRef.current;
       }
 
-      const memoryContext = getLastPayPalCaptureContext();
-      const pendingSession = fallbackSession ?? memoryPendingSessionRef.current ?? (await loadPayPalPendingSession());
-
-      const orderId = pendingSession?.orderId ?? memoryContext?.orderId;
-      const checkoutParams = pendingSession?.checkoutParams ?? memoryContext?.checkoutParams;
-      const createPayload = pendingSession?.createPayload ?? memoryContext?.createPayload;
-
-      if (!orderId || !checkoutParams || !createPayload) {
-        if (!options?.quiet) {
-          setCheckoutNotice('PayPal payment was approved, but checkout details were lost. Please contact support if you were charged.');
+      const run = (async (): Promise<boolean> => {
+        if (captureResultRef.current?.paymentMethod === 'paypal') {
+          memoryPendingSessionRef.current = null;
+          await clearPayPalPendingSession();
+          return true;
         }
-        return false;
-      }
 
-      beginPayPalCapturePhase();
-      setCheckoutNotice(null);
+        const memoryContext = getLastPayPalCaptureContext();
+        const pendingSession = fallbackSession ?? memoryPendingSessionRef.current ?? (await loadPayPalPendingSession());
 
-      try {
-        const captureOrderId = resolvePayPalOrderIdForCapture(orderId, returnUrl);
-        const result = await capturePayPalOrderWithRetry(
-          captureOrderId,
-          checkoutParams,
-          createPayload,
-          3,
-        );
+        const orderId = pendingSession?.orderId ?? memoryContext?.orderId;
+        const checkoutParams = pendingSession?.checkoutParams ?? memoryContext?.checkoutParams;
+        const createPayload = pendingSession?.createPayload ?? memoryContext?.createPayload;
 
-        if (!result) {
+        if (!orderId || !checkoutParams || !createPayload) {
+          if (!options?.quiet) {
+            setCheckoutNotice('PayPal payment was approved, but checkout details were lost. Please contact support if you were charged.');
+          }
+          return false;
+        }
+
+        beginPayPalCapturePhase();
+        setCheckoutNotice(null);
+
+        try {
+          const captureOrderId = resolvePayPalOrderIdForCapture(orderId, returnUrl);
+          const result = await capturePayPalOrderWithRetry(
+            captureOrderId,
+            checkoutParams,
+            createPayload,
+            3,
+          );
+
+          if (!result) {
+            if (!options?.quiet && !captureResultRef.current) {
+              setCheckoutNotice(
+                returnUrl
+                  ? 'PayPal approved your payment, but order confirmation failed. Please contact support if you were charged.'
+                  : 'PayPal payment could not be confirmed. If you were charged, contact support.',
+              );
+            }
+            return Boolean(captureResultRef.current);
+          }
+
+          memoryPendingSessionRef.current = null;
+          await clearPayPalPendingSession();
+          setCheckoutNotice(null);
+          return true;
+        } catch (err) {
           if (!options?.quiet && !captureResultRef.current) {
-            setCheckoutNotice(
-              returnUrl
-                ? 'PayPal approved your payment, but order confirmation failed. Please contact support if you were charged.'
-                : 'PayPal payment could not be confirmed. If you were charged, contact support.',
-            );
+            setCheckoutNotice(getErrorMessage(err, 'Failed to complete PayPal payment'));
           }
           return Boolean(captureResultRef.current);
+        } finally {
+          isPayPalFlowActiveRef.current = false;
+          endPayPalCheckoutOverlay();
         }
+      })();
 
-        memoryPendingSessionRef.current = null;
-        await clearPayPalPendingSession();
-        setCheckoutNotice(null);
-        return true;
-      } catch (err) {
-        if (!options?.quiet && !captureResultRef.current) {
-          setCheckoutNotice(getErrorMessage(err, 'Failed to complete PayPal payment'));
-        }
-        return Boolean(captureResultRef.current);
+      payPalCaptureRunRef.current = run;
+      try {
+        return await run;
       } finally {
-        isPayPalFlowActiveRef.current = false;
-        endPayPalCheckoutOverlay();
+        if (payPalCaptureRunRef.current === run) {
+          payPalCaptureRunRef.current = null;
+        }
       }
     },
     [beginPayPalCapturePhase, capturePayPalOrderWithRetry, endPayPalCheckoutOverlay, getLastPayPalCaptureContext],

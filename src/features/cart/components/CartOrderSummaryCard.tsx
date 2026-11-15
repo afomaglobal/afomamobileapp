@@ -28,6 +28,7 @@ export function CartOrderSummaryCard({
   currency = 'CAD',
   total = null,
   shippingPending = false,
+  shippingCalculating = false,
   ...summaryProps
 }: CartOrderSummaryCardProps) {
   const [expanded, setExpanded] = useState(true);
@@ -49,7 +50,11 @@ export function CartOrderSummaryCard({
 
         <View style={styles.headerRight}>
           {!expanded ? (
-            shippingPending || total == null ? (
+            shippingCalculating ? (
+              <AppText variant="bodySmall" color="textMuted" style={styles.collapsedTotal}>
+                Calculating…
+              </AppText>
+            ) : shippingPending || total == null ? (
               <AppText variant="bodyMedium" color="textMuted" style={styles.collapsedTotal}>
                 —
               </AppText>
@@ -82,6 +87,7 @@ export function CartOrderSummaryCard({
             currency={currency}
             total={total}
             shippingPending={shippingPending}
+            shippingCalculating={shippingCalculating}
             {...summaryProps}
           />
 

@@ -48,6 +48,10 @@ export function getLastMessagePreview(lastMessage?: ChatLastMessage | null): str
     return 'Start the conversation…';
   }
 
+  if (lastMessage.isDeleted) {
+    return 'Message deleted';
+  }
+
   if (lastMessage.text?.trim()) {
     return lastMessage.text.trim();
   }

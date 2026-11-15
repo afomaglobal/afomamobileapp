@@ -14,7 +14,6 @@ import { AppInput } from '../../../components/ui/AppInput';
 import { AppText } from '../../../components/ui/AppText';
 import { colors, spacing } from '../../../design-system';
 import { StandardProductImageList } from '../../seller/products/components/StandardProductImageList';
-import { ListingFeePaymentModal } from '../../seller/membership/components/ListingFeePaymentModal';
 import type { useServiceProductWizard } from '../hooks/useServiceProductWizard';
 import { useServiceVerticalPicker } from '../hooks/useServiceVerticalPicker';
 import { WeeklyHoursEditor } from './WeeklyHoursEditor';
@@ -427,7 +426,6 @@ export function ServiceProductForm({
           </View>
         )}
       </KeyboardAwareFormScreen>
-      <ListingFeePaymentModal {...wizard.listingFeePayment.modalProps} />
     </>
   );
 }

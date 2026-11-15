@@ -27,7 +27,6 @@ import type { SellerStackParamList } from '../../../app/navigation/sellerTypes';
 import { authReturnTo } from '../../auth/utils/authNavigation';
 import { useRequireSeller } from '../hooks/useRequireSeller';
 import { useSellerProfile } from '../hooks/useSellerProfile';
-import { ListingFeePaymentModal } from '../membership/components/ListingFeePaymentModal';
 import { StandardProductImageList } from '../products/components/StandardProductImageList';
 import { ProductShippingEstimateTrigger } from '../products/components/ProductShippingEstimateTrigger';
 import { useSellerProductCategories } from '../products/hooks/useSellerProductCategories';
@@ -492,7 +491,6 @@ export function SellerStandardProductScreen({ navigation, route }: Props) {
           ) : null}
         </View>
     </KeyboardAwareFormScreen>
-    <ListingFeePaymentModal {...wizard.listingFeeModalProps} />
     </>
   );
 }

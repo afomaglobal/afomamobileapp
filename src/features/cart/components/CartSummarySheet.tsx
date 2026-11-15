@@ -1,4 +1,4 @@
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -15,6 +15,8 @@ export interface CartSummarySheetProps {
   currency?: string;
   total?: number | null;
   shippingPending?: boolean;
+  /** Carrier rates are being fetched — show a clear "Calculating…" state instead of a dash. */
+  shippingCalculating?: boolean;
   checkoutDisabled?: boolean;
   onCheckout: () => void;
   showAuthGate?: boolean;
@@ -29,6 +31,7 @@ export function CartSummarySheet({
   currency = 'CAD',
   total = null,
   shippingPending = false,
+  shippingCalculating = false,
   checkoutDisabled,
   onCheckout,
   showAuthGate = false,
@@ -48,35 +51,34 @@ export function CartSummarySheet({
     shippingPending || total == null ? '—' : formatProductPrice(total, currency);
 
   if (showAuthGate) {
+    // Kept compact: a tall stacked gate on top of the floating tab bar left almost no room
+    // for the cart list on smaller phones.
     return (
-      <View style={[styles.sheet, { paddingBottom: bottomPadding }, style]}>
-        <AppText variant="bodySmall" color="textSecondary" style={styles.authGateCopy}>
+      <View style={[styles.sheet, styles.sheetCompact, { paddingBottom: bottomPadding }, style]}>
+        <AppText
+          variant="caption"
+          color="textSecondary"
+          style={styles.authGateCopy}
+          numberOfLines={2}
+        >
           {authGateMessage}
         </AppText>
 
+        {/* Stacked: side by side, "Continue as guest" didn't fit on narrow phones. */}
         <View style={styles.authGateActions}>
           <AppButton
             label="Sign in"
             variant="outline"
             fullWidth
-            size="lg"
             shape="pill"
             onPress={onSignIn}
           />
           <AppButton
             label="Continue as guest"
             fullWidth
-            size="lg"
             shape="pill"
             onPress={onContinueAsGuest}
           />
-        </View>
-
-        <View style={styles.secureRow}>
-          <Ionicons name="lock-closed-outline" size={14} color={colors.textMuted} />
-          <AppText variant="caption" color="textMuted">
-            Secure checkout
-          </AppText>
         </View>
       </View>
     );
@@ -88,12 +90,21 @@ export function CartSummarySheet({
         <AppText variant="body" color="textSecondary">
           Total
         </AppText>
-        <AppText
-          variant="h2"
-          style={[styles.totalValue, shippingPending && styles.totalPending]}
-        >
-          {totalLabel}
-        </AppText>
+        {shippingCalculating ? (
+          <View style={styles.calculatingRow} accessibilityLabel="Calculating total">
+            <ActivityIndicator size="small" color={colors.primary} />
+            <AppText variant="bodyMedium" color="textSecondary">
+              Calculating…
+            </AppText>
+          </View>
+        ) : (
+          <AppText
+            variant="h2"
+            style={[styles.totalValue, shippingPending && styles.totalPending]}
+          >
+            {totalLabel}
+          </AppText>
+        )}
       </View>
 
       <AppButton
@@ -126,12 +137,21 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     ...shadows.floating,
   },
+  sheetCompact: {
+    gap: spacing.sm,
+    paddingTop: spacing.sm,
+  },
   authGateCopy: {
     textAlign: 'center',
-    lineHeight: 20,
   },
   authGateActions: {
     gap: spacing.sm,
+  },
+  calculatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 32,
   },
   totalBar: {
     flexDirection: 'row',

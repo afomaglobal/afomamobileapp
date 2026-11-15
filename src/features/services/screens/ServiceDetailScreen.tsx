@@ -45,6 +45,8 @@ import { useMarketplaceFooterContentInset } from '../../../app/navigation/market
 import type { Product } from '../../../services/types/product';
 
 import { useAuth } from '../../auth/hooks/useAuth';
+import { openAuthLogin } from '../../auth/utils/authNavigation';
+import { useContentReport } from '../../moderation/hooks/useContentReport';
 
 import { resolveAuthUserId } from '../../auth/utils/resolveAuthUserId';
 
@@ -591,6 +593,11 @@ export function ServiceDetailScreen({ navigation, route }: Props) {
 
   );
 
+  const { reportListing, reportReview } = useContentReport({
+    isAuthenticated,
+    onRequireSignIn: () => openAuthLogin(navigation, productAuthReturnTo),
+  });
+
 
 
   const handleVisitShop = useCallback(() => {
@@ -995,6 +1002,8 @@ export function ServiceDetailScreen({ navigation, route }: Props) {
 
                 reviewsKind="service"
 
+                onReportReview={reportReview}
+
               />
 
 
@@ -1014,6 +1023,20 @@ export function ServiceDetailScreen({ navigation, route }: Props) {
               ) : null}
 
 
+
+              {service?._id ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Report this listing"
+                  onPress={() => reportListing(String(service._id))}
+                  style={styles.reportListingRow}
+                  hitSlop={6}
+                >
+                  <AppText variant="bodySmall" style={{ color: theme.textSecondary }}>
+                    Report this listing
+                  </AppText>
+                </Pressable>
+              ) : null}
 
               {sellerName ? (
 
@@ -1112,6 +1135,10 @@ export function ServiceDetailScreen({ navigation, route }: Props) {
 
 
 const styles = StyleSheet.create({
+  reportListingRow: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.sm,
+  },
 
   screen: {
 

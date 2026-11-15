@@ -3,6 +3,7 @@ import io from 'socket.io-client/dist/socket.io.js';
 import type { Socket } from 'socket.io-client';
 
 import { env } from '../../app/config/env';
+import { getSessionAccessTokenSync } from '../api/sessionAccessToken';
 import type { ChatMessage, SendMessageAck } from '../../features/chat/types/chat';
 
 let socket: Socket | null = null;
@@ -55,6 +56,8 @@ export function connectChatSocket(userId: string): Socket | null {
       reconnectionAttempts: 8,
       reconnectionDelay: 500,
       reconnectionDelayMax: 3000,
+      // Sent on every (re)connect; the server uses it to decide who this socket is.
+      auth: (cb: (data: { token: string }) => void) => cb({ token: getSessionAccessTokenSync() ?? '' }),
     });
   }
 
@@ -155,3 +158,74 @@ export function getJoinedChatUserId(): string | null {
   return joinedUserId;
 }
 
+
+/** Asks the server for the user's total unread chat messages across all chats. */
+export async function requestChatUnreadTotal(userId: string): Promise<number | null> {
+  const activeSocket = await ensureChatSocketConnected();
+  if (!activeSocket?.connected || !userId) {
+    return null;
+  }
+
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => resolve(null), 8000);
+    activeSocket.emit('get_unread_total', { userId }, (response?: { total?: number }) => {
+      clearTimeout(timeout);
+      resolve(typeof response?.total === 'number' ? response.total : null);
+    });
+  });
+}
+
+export async function editChatMessage(
+  messageId: string,
+  text: string,
+): Promise<{ status: 'ok' | 'error'; message?: ChatMessage; error?: string }> {
+  const activeSocket = await ensureChatSocketConnected();
+  if (!activeSocket?.connected) {
+    return { status: 'error', error: 'Chat connection unavailable' };
+  }
+
+  return new Promise((resolve) => {
+    const timeout = setTimeout(
+      () => resolve({ status: 'error', error: 'No response from server' }),
+      10000,
+    );
+    activeSocket.emit(
+      'edit_message',
+      { messageId, text },
+      (response?: { status: 'ok' | 'error'; message?: ChatMessage; error?: string }) => {
+        clearTimeout(timeout);
+        resolve(response ?? { status: 'error', error: 'No response from server' });
+      },
+    );
+  });
+}
+
+type ChatAck = { status: 'ok' | 'error'; error?: string };
+
+async function emitWithAck(event: string, payload: Record<string, unknown>): Promise<ChatAck> {
+  const activeSocket = await ensureChatSocketConnected();
+  if (!activeSocket?.connected) {
+    return { status: 'error', error: 'Chat connection unavailable' };
+  }
+
+  return new Promise((resolve) => {
+    const timeout = setTimeout(
+      () => resolve({ status: 'error', error: 'No response from server' }),
+      10000,
+    );
+    activeSocket.emit(event, payload, (response?: ChatAck) => {
+      clearTimeout(timeout);
+      resolve(response ?? { status: 'error', error: 'No response from server' });
+    });
+  });
+}
+
+/** Deletes one of your own messages; the server broadcasts `message_deleted` to the chat. */
+export function deleteChatMessage(messageId: string): Promise<ChatAck> {
+  return emitWithAck('delete_message', { messageId });
+}
+
+/** Toggles your reaction; the server broadcasts `reaction_added` with the updated message. */
+export function toggleChatReaction(messageId: string, type: string): Promise<ChatAck> {
+  return emitWithAck('add_reaction', { messageId, type });
+}

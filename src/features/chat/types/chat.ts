@@ -23,6 +23,7 @@ export interface ChatLastMessage {
   attachments?: ChatAttachment[];
   createdAt?: string;
   readBy?: string[];
+  isDeleted?: boolean;
 }
 
 export interface ChatSummary {

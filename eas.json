@@ -1,4 +1,3 @@
-
 {
   "cli": {
     "version": ">= 22.3.0",
@@ -11,6 +10,7 @@
       "environment": "development",
       "env": {
         "EXPO_PUBLIC_APP_ENV": "development",
+        "APP_VARIANT": "test",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
@@ -18,8 +18,26 @@
       "distribution": "internal",
       "environment": "preview",
       "channel": "preview",
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
         "EXPO_PUBLIC_APP_ENV": "preview",
+        "APP_VARIANT": "test",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      }
+    },
+    "test": {
+      "autoIncrement": true,
+      "distribution": "store",
+      "environment": "preview",
+      "channel": "test",
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "preview",
+        "APP_VARIANT": "test",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
@@ -37,6 +55,28 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6825084854",
+        "metadataPath": "./store.config.js",
+        "bundleIdentifier": "com.afomamarketplace.afomamobile"
+      },
+      "android": {
+        "track": "internal",
+        "releaseStatus": "completed",
+        "applicationId": "com.afomamarketplace.afomamobile"
+      }
+    },
+    "test": {
+      "ios": {
+        "bundleIdentifier": "com.afomamarketplace.afomamobile.test",
+        "ascAppId": "6834522472"
+      },
+      "android": {
+        "applicationId": "com.afomamarketplace.afomamobile.test",
+        "track": "internal",
+        "releaseStatus": "completed"
+      }
+    }
   }
 }

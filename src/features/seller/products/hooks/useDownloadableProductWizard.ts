@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import * as DocumentPicker from 'expo-document-picker';
 
 import { getErrorMessage } from '../../../../services/api/errors';
-import { useListingFeePayment } from '../../membership/hooks/useListingFeePayment';
 import {
   canSubmitProductForReview,
   getSellerProductById,
@@ -54,7 +53,6 @@ export function useDownloadableProductWizard(sellerId?: string, productId?: stri
     updateImageAltText,
     imageUploadSheetProps,
   } = useProductImages();
-  const listingFeePayment = useListingFeePayment(sellerId);
   const [downloadFile, setDownloadFile] = useState<DownloadableFileEntry | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -285,7 +283,7 @@ export function useDownloadableProductWizard(sellerId?: string, productId?: stri
 
       const product = editId
         ? await updateProduct(editId, payload)
-        : await createProductWithTierGate(payload, listingFeePayment.requestListingFeePayment);
+        : await createProductWithTierGate(payload);
       const nextProductId = product._id;
 
       if (!nextProductId) {
@@ -321,7 +319,6 @@ export function useDownloadableProductWizard(sellerId?: string, productId?: stri
     savedProductId,
     sellerId,
     uploadPendingImages,
-    listingFeePayment.requestListingFeePayment,
     values,
   ]);
 
@@ -391,6 +388,5 @@ export function useDownloadableProductWizard(sellerId?: string, productId?: stri
     submitForReview,
     setSaveError,
     setSubmitError,
-    listingFeeModalProps: listingFeePayment.modalProps,
   };
 }

@@ -19,6 +19,7 @@ export interface ProductDetailReviewsSectionProps {
   theme: PdpTheme;
   /** Product PDP uses “item reviews”; service PDP uses “service reviews”. */
   reviewsKind?: 'product' | 'service';
+  onReportReview?: (reviewId: string) => void;
 }
 
 interface RatingBreakdownRowProps {
@@ -131,6 +132,7 @@ export function ProductDetailReviewsSection({
   isLoading,
   theme,
   reviewsKind = 'product',
+  onReportReview,
 }: ProductDetailReviewsSectionProps) {
   const [expanded, setExpanded] = useState(true);
   const hasReviews = reviewCount > 0 && reviews.length > 0;
@@ -202,7 +204,7 @@ export function ProductDetailReviewsSection({
                 </View>
               </View>
 
-              <ProductDetailReviewsContent reviews={reviews} theme={theme} />
+              <ProductDetailReviewsContent reviews={reviews} theme={theme} onReportReview={onReportReview} />
             </>
           )}
         </View>

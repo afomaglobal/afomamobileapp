@@ -59,6 +59,15 @@ export function MarketplaceHubScreen({ navigation }: Props) {
     hubNavigation.navigate('BellNotifications');
   };
 
+  const handleMessagesPress = () => {
+    if (!isLoading && !isAuthenticated) {
+      openAuthLogin(hubNavigation, authReturnTo.messages());
+      return;
+    }
+
+    hubNavigation.navigate('ChatList');
+  };
+
   const handleCategoryBackPress = () => {
     navigateToHomeTab(hubNavigation);
   };
@@ -83,6 +92,7 @@ export function MarketplaceHubScreen({ navigation }: Props) {
         onProfilePress={handleProfilePress}
         onSearchPress={handleSearchPress}
         onNotificationsPress={handleNotificationsPress}
+        onMessagesPress={handleMessagesPress}
       />
       <View style={styles.content}>
         <HomeMarketplaceContent navigation={contentNavigation} />

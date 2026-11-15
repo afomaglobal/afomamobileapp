@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Rating } from '../../../components/ecommerce';
 import { AppText } from '../../../components/ui/AppText';
@@ -9,6 +9,8 @@ import type { Review } from '../../../services/types/review';
 export interface ProductDetailReviewsContentProps {
   reviews: Review[];
   theme: PdpTheme;
+  /** Report a review (App Store 1.2). Omit to hide the Report action. */
+  onReportReview?: (reviewId: string) => void;
 }
 
 function getReviewerName(review: Review): string {
@@ -39,7 +41,7 @@ function getReviewRating(review: Review): number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 5;
 }
 
-export function ProductDetailReviewsContent({ reviews, theme }: ProductDetailReviewsContentProps) {
+export function ProductDetailReviewsContent({ reviews, theme, onReportReview }: ProductDetailReviewsContentProps) {
   const visibleReviews = reviews
     .filter((review) => !review.isReply && getReviewText(review))
     .slice(0, 3);
@@ -69,6 +71,19 @@ export function ProductDetailReviewsContent({ reviews, theme }: ProductDetailRev
           <AppText variant="bodySmall" style={{ color: theme.textSecondary }} numberOfLines={4}>
             {getReviewText(review)}
           </AppText>
+          {onReportReview && review._id ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Report review"
+              hitSlop={8}
+              onPress={() => onReportReview(String(review._id))}
+              style={styles.reportButton}
+            >
+              <AppText variant="caption" style={{ color: theme.textSecondary }}>
+                Report
+              </AppText>
+            </Pressable>
+          ) : null}
         </View>
       ))}
     </View>
@@ -93,5 +108,9 @@ const styles = StyleSheet.create({
   reviewerName: {
     flex: 1,
     fontWeight: '700',
+  },
+  reportButton: {
+    alignSelf: 'flex-end',
+    paddingVertical: 2,
   },
 });

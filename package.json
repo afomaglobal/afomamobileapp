@@ -13,7 +13,13 @@
     "scan:export-stg": "node scripts/scan-export-for-stg-hosts.mjs",
     "eas:sync-production-secrets": "node scripts/sync-production-eas-secrets-from-env.mjs",
     "metadata:push": "eas metadata:push",
-    "metadata:pull": "eas metadata:pull"
+    "metadata:pull": "eas metadata:pull",
+    "build:test": "eas build --profile test --platform all",
+    "submit:test": "eas submit --profile test --platform all",
+    "submit:test:ios": "eas submit --profile test --platform ios",
+    "submit:test:android": "eas submit --profile test --platform android",
+    "build:live": "eas build --profile production --platform all",
+    "submit:live": "eas submit --profile production --platform all"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -27,6 +33,7 @@
     "babel-preset-expo": "~54.0.10",
     "country-state-city": "^3.2.1",
     "expo": "~54.0.36",
+    "expo-build-properties": "~1.0.10",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.14",
     "expo-dev-client": "~6.0.21",

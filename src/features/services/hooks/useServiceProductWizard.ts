@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { getErrorMessage } from '../../../services/api/errors';
-import { useListingFeePayment } from '../../seller/membership/hooks/useListingFeePayment';
 import {
   canSubmitProductForReview,
   getSellerProductById,
@@ -114,7 +113,6 @@ export function useServiceProductWizard(
   }, [sellerId]);
 
   const effectiveSellerId = resolvedSellerId ?? sellerId;
-  const listingFeePayment = useListingFeePayment(effectiveSellerId);
 
   const isEditMode = Boolean(productId);
   const canSubmit = canSubmitProductForReview(productStatus);
@@ -281,7 +279,7 @@ export function useServiceProductWizard(
       if (savedProductId) {
         product = await updateProduct(savedProductId, payload);
       } else {
-        product = await createProductWithTierGate(payload, listingFeePayment.requestListingFeePayment);
+        product = await createProductWithTierGate(payload);
       }
       const id = product._id ?? savedProductId;
       if (id) {
@@ -304,7 +302,6 @@ export function useServiceProductWizard(
     currencyRate,
     images,
     isEditMode,
-    listingFeePayment.requestListingFeePayment,
     productStatus,
     savedProductId,
     effectiveSellerId,
@@ -373,6 +370,5 @@ export function useServiceProductWizard(
     savedProductId,
     save,
     submitForReview,
-    listingFeePayment,
   };
 }

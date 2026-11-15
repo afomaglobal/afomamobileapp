@@ -1,12 +1,12 @@
 import { useCallback, useState } from 'react';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { loadGuestCheckoutProfile } from '../../../services/storage/guestSessionStorage';
 import { useAuth } from '../../auth/hooks/useAuth';
-import { openAuthLogin, type AuthReturnTo, type NavLike } from '../../auth/utils/authNavigation';
+import { useAuthGateRedirect } from '../../auth/hooks/useAuthGateRedirect';
+import type { AuthReturnTo } from '../../auth/utils/authNavigation';
 
 export function useRequireCheckoutAccess(returnTo: AuthReturnTo) {
-  const navigation = useNavigation<NavLike>();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [guestReady, setGuestReady] = useState(false);
   const [guestLoading, setGuestLoading] = useState(true);
@@ -40,15 +40,7 @@ export function useRequireCheckoutAccess(returnTo: AuthReturnTo) {
   const hasAccess = isAuthenticated || guestReady;
   const isLoading = authLoading || guestLoading;
 
-  useFocusEffect(
-    useCallback(() => {
-      if (isLoading || hasAccess) {
-        return;
-      }
-
-      openAuthLogin(navigation, returnTo);
-    }, [hasAccess, isLoading, navigation, returnTo]),
-  );
+  useAuthGateRedirect({ needsLogin: !hasAccess, isLoading, returnTo });
 
   return {
     isAuthenticated,

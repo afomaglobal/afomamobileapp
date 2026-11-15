@@ -8,6 +8,7 @@ import {
   isProductDisabled,
   isProductOutOfStock,
 } from '../../products/utils/productDisplay';
+import { isProductHiddenInApp } from '../../products/utils/mobileCatalogPolicy';
 import {
   buildCustomizableCartKey,
   buildSelectedVariationsForCart,
@@ -89,6 +90,11 @@ export function validateAddToCartInput(input: AddToCartLineInput): void {
 
   if (isProductDisabled(product)) {
     throw new AddToCartValidationError('This product is unavailable.');
+  }
+
+  // Digital products and hidden categories are not sold in the mobile apps (mobileCatalogPolicy).
+  if (isProductHiddenInApp(product)) {
+    throw new AddToCartValidationError('This item isn\'t available for purchase in the app.');
   }
 
   if (product.productType === 'Downloadable' && quantity !== 1) {

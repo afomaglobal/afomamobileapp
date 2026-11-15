@@ -11,6 +11,8 @@ import { SellerDashboardHeader } from '../dashboard/components/SellerDashboardHe
 import { SellerDashboardOrderOverviewSection } from '../dashboard/components/SellerDashboardOrderOverviewSection';
 import { SellerDashboardRecentOrdersSection } from '../dashboard/components/SellerDashboardRecentOrdersSection';
 import { SellerDashboardSetupAlert } from '../dashboard/components/SellerDashboardSetupAlert';
+import { SellerSellingStatusBanner } from '../membership/components/SellerSellingStatusBanner';
+import { useSellerMembership } from '../membership/hooks/useSellerMembership';
 import { SellerOperationalAlertsSection } from '../dashboard/components/SellerOperationalAlertsSection';
 import { useSellerDashboard } from '../dashboard/hooks/useSellerDashboard';
 import type { SellerDashboardOrder } from '../dashboard/types';
@@ -37,6 +39,7 @@ export function SellerDashboardScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { isAuthorized, sellerId } = useRequireSeller(DASHBOARD_RETURN_TO);
   const { profile } = useSellerProfile(isAuthorized ? sellerId : undefined);
+  const { membership } = useSellerMembership(isAuthorized ? sellerId : undefined);
   const {
     orderCounts,
     payoutSummary,
@@ -118,6 +121,7 @@ export function SellerDashboardScreen({ navigation }: Props) {
           <RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} tintColor={colors.primary} />
         }
       >
+        <SellerSellingStatusBanner membership={membership} />
         {!setupComplete ? <SellerDashboardSetupAlert profile={profile} onContinue={handleContinueSetup} /> : null}
 
         <SellerDashboardOrderOverviewSection

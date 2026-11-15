@@ -7,6 +7,7 @@ import type {
 } from '../types/product';
 import type { PaginationParams } from '../types/common';
 import { apiDelete, apiGet } from './request';
+import { excludeHiddenProducts } from '../../features/products/utils/mobileCatalogPolicy';
 
 function normalizeProductList(data: Product[] | ProductsListResponse | undefined): Product[] {
   if (!data) {
@@ -18,28 +19,39 @@ function normalizeProductList(data: Product[] | ProductsListResponse | undefined
   return data.products ?? [];
 }
 
+// Buyer-facing lists below drop digital (downloadable) products: they are not sold in the
+// mobile apps (see features/products/utils/mobileCatalogPolicy.ts).
+
 export async function getBestProducts(): Promise<Product[]> {
-  return apiGet<Product[]>('/products/best/Product', undefined, 'Failed to load best products');
+  return excludeHiddenProducts(
+    await apiGet<Product[]>('/products/best/Product', undefined, 'Failed to load best products'),
+  );
 }
 
 export async function getDiscountedProducts(limit: number): Promise<Product[]> {
-  return apiGet<Product[]>(
-    '/products/discounted/Product',
-    { params: { limit } },
-    'Failed to load discounted products',
+  return excludeHiddenProducts(
+    await apiGet<Product[]>(
+      '/products/discounted/Product',
+      { params: { limit } },
+      'Failed to load discounted products',
+    ),
   );
 }
 
 export async function getNewArrivalProducts(limit: number): Promise<Product[]> {
-  return apiGet<Product[]>(
-    '/products/newArrival/Product',
-    { params: { limit } },
-    'Failed to load new arrival products',
+  return excludeHiddenProducts(
+    await apiGet<Product[]>(
+      '/products/newArrival/Product',
+      { params: { limit } },
+      'Failed to load new arrival products',
+    ),
   );
 }
 
 export async function getBestSellingProducts(): Promise<Product[]> {
-  return apiGet<Product[]>('/products/bestSelling/Product', undefined, 'Failed to load best selling products');
+  return excludeHiddenProducts(
+    await apiGet<Product[]>('/products/bestSelling/Product', undefined, 'Failed to load best selling products'),
+  );
 }
 
 export async function getProductBySlug(slug: string): Promise<Product> {
@@ -69,7 +81,7 @@ export async function getSellerProductsPage(
   );
 
   return {
-    products: normalizeProductList(data),
+    products: excludeHiddenProducts(normalizeProductList(data)),
     pagination: Array.isArray(data) ? undefined : data.pagination,
   };
 }
@@ -110,7 +122,9 @@ export async function getProductsBySellerCount(sellerId: string): Promise<Produc
 
 export async function getProductsByIds(ids: string[]): Promise<Product[]> {
   const joined = ids.map(encodeURIComponent).join(',');
-  return apiGet<Product[]>(`/products/byIds/${joined}`, undefined, 'Failed to load products');
+  return excludeHiddenProducts(
+    await apiGet<Product[]>(`/products/byIds/${joined}`, undefined, 'Failed to load products'),
+  );
 }
 
 export async function getRelatedProducts(
@@ -132,7 +146,7 @@ export async function getRelatedProductsPage(
   );
 
   return {
-    products: normalizeProductList(data),
+    products: excludeHiddenProducts(normalizeProductList(data)),
     pagination: Array.isArray(data) ? undefined : data.pagination,
   };
 }
@@ -143,13 +157,18 @@ export async function getProductsByCategory(categoryId: string): Promise<Product
     undefined,
     'Failed to load category products',
   );
-  return normalizeProductList(data);
+  return excludeHiddenProducts(normalizeProductList(data));
 }
 
 export async function globalProductSearch(name: string): Promise<GlobalSearchResponse> {
-  return apiGet<GlobalSearchResponse>(
+  const data = await apiGet<GlobalSearchResponse>(
     '/products/global/search',
     { params: { name } },
     'Failed to search products',
   );
+  return {
+    ...data,
+    matchedProducts: excludeHiddenProducts(data?.matchedProducts),
+    suggestedProducts: excludeHiddenProducts(data?.suggestedProducts),
+  };
 }

@@ -382,7 +382,9 @@ export function useCheckoutShippingRates(
 
     lastRequestKeyRef.current = requestKey;
 
-    const debounceMs = isRefetch ? 150 : 0;
+    // Wait for quantity taps to settle so rapid +/- presses trigger one carrier request, not one
+    // per tap (each of which used to reset the shipping UI while the user was still tapping).
+    const debounceMs = isRefetch ? 600 : 0;
     const timeoutId = setTimeout(() => {
       void fetchRates();
     }, debounceMs);

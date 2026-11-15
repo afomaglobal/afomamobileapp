@@ -43,6 +43,7 @@ import { CartSummarySheet } from '../components/CartSummarySheet';
 import { CartVariationSheet, buildCartVariationSelections } from '../components/CartVariationSheet';
 import { useCart } from '../hooks/useCart';
 import { useCartShipping } from '../hooks/useCartShipping';
+import { isProductHiddenInApp } from '../../products/utils/mobileCatalogPolicy';
 import { useCartCoupon } from '../hooks/useCartCoupon';
 import { useCartRecommendations } from '../hooks/useCartRecommendations';
 import {
@@ -266,6 +267,17 @@ export function CartScreen({ route, navigation }: Props) {
         ))) ||
     (!selectedRequiresShipping && cartShipping.shippingContext.needsDeliveryDetails);
 
+  // True while carrier rates for the current selection are being fetched, so totals can say
+  // "Calculating…" instead of showing an unexplained dash.
+  const shippingCalculating =
+    selectedItemIds.size > 0 &&
+    selectedRequiresShipping &&
+    !cartShipping.shippingContext.needsDeliveryDetails &&
+    !cartShipping.error &&
+    (cartShipping.isLoadingAuthAddress ||
+      cartShipping.isLoading ||
+      (cartShipping.shippingContext.canFetchRates && !cartShipping.shippingRatesSynced));
+
   const totals = useMemo(
     () =>
       calculateCartTotals({
@@ -279,6 +291,11 @@ export function CartScreen({ route, navigation }: Props) {
   );
 
   const selectedItemCount = selectedEntries.length;
+  // Digital products and hidden categories can't be bought in the mobile apps
+  // (mobileCatalogPolicy). A cart synced from the website may still contain one, so block checkout.
+  const selectedHasDigitalItem = selectedEntries.some((entry) =>
+    isProductHiddenInApp(entry.line?.productData),
+  );
   const editingVariationLine = variationItemId ? cart[variationItemId] ?? null : null;
 
   const handleBackFromCart = () => {
@@ -410,6 +427,15 @@ export function CartScreen({ route, navigation }: Props) {
         <CheckoutStepIndicator currentStep="cart" />
       </View>
 
+      {selectedHasDigitalItem ? (
+        <View style={styles.digitalNotice}>
+          <AppText variant="bodySmall" color="error">
+            Your cart contains an item that isn&apos;t available for purchase in the app. Remove it
+            or deselect it to continue.
+          </AppText>
+        </View>
+      ) : null}
+
       <FlatList
         ref={listRef}
         style={styles.list}
@@ -442,7 +468,6 @@ export function CartScreen({ route, navigation }: Props) {
               setVariationItemId(itemId);
             }}
             isRemoving={removingItemId === item.id}
-            isUpdating={updatingItemId === item.id}
             showRemove
           />
         )}
@@ -476,6 +501,7 @@ export function CartScreen({ route, navigation }: Props) {
               serviceChargeAmount={totals.displayServiceCharge}
               total={totals.displayTotal}
               shippingPending={shippingPending}
+              shippingCalculating={shippingCalculating}
               onApplyPromo={applyPromoCode}
               onRemovePromo={clearCoupon}
               isApplyingCoupon={isApplyingCoupon}
@@ -498,7 +524,10 @@ export function CartScreen({ route, navigation }: Props) {
         currency={currency}
         total={totals.displayTotal}
         shippingPending={shippingPending}
-        checkoutDisabled={!cartShipping.canProceedToCheckout || selectedItemCount === 0}
+        shippingCalculating={shippingCalculating}
+        checkoutDisabled={
+          !cartShipping.canProceedToCheckout || selectedItemCount === 0 || selectedHasDigitalItem
+        }
         showAuthGate={showCheckoutAuthGate}
         authGateMessage={
           selectedRequiresShipping
@@ -563,6 +592,10 @@ export function CartScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  digitalNotice: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,

@@ -1,8 +1,12 @@
 {
   "configVersion": 0,
   "apple": {
+    "version": "1.0.0",
     "copyright": "2026 AFOMA Marketplace",
-    "categories": ["SHOPPING", "LIFESTYLE"],
+    "categories": [
+      "SHOPPING",
+      "LIFESTYLE"
+    ],
     "advisory": {
       "alcoholTobaccoOrDrugUseOrReferences": "NONE",
       "contests": "NONE",
@@ -56,7 +60,7 @@
       "email": "contact@afoma.io",
       "phone": "+13652936113",
       "demoRequired": true,
-      "notes": "AFOMA Marketplace review guide. Support: +13652936113, contact@afoma.io (monitored during review). SIGN-IN: email + OTP only—no password. Put demo buyer email in Sign-In Required; OTP is emailed to that address. BUYER: Account → sign in → Home/Categories → physical (Standard) product → Add to cart → Checkout → Payment (sandbox/test only) → Account → My Orders. MESSAGES: Account → Messages → report (flag) / block (ban icon) in thread header. SELLER: sign out → seller demo email + OTP → Account → Seller → Dashboard, Listing Management (skip membership payment unless test mode). DELETE ACCOUNT (disposable test user only): Account → Account details → Delete account. Full steps, no secrets in repo: store/REVIEWER_ACCESS.template.md"
+      "notes": "AFOMA Marketplace — App Review guide\nSupport during review: +13652936113 / contact@afoma.io\nScreen recording (iPhone, latest iOS): {{VIDEO_URL}}\n\nSIGN-IN (email + one-time code, no password)\nBuyer: {{BUYER_EMAIL}}  Seller: {{SELLER_EMAIL}}\nCode for both review accounts: {{CODE}} (fixed for these accounts; no email needed)\nAccount tab → Log in → enter email → enter the code.\n\n1. PURPOSE & AUDIENCE\nAFOMA is a marketplace where independent makers and small businesses (mainly in Nigeria) sell handmade goods, local foods, beauty products and in-person beauty/wellness services to adult shoppers. It gives small sellers a storefront, orders and payouts without their own website.\n\n2. MAIN FLOWS\nBuyer: Home/Categories → product → Add to cart → Cart → Checkout → Payment screen → Account → My Orders.\nMessages: Account → Messages → thread header: flag = Report user, ban icon = Block user.\nReport content: product page → “Report this listing”; under any review → “Report”.\nSeller (sign out, log in with seller email): Account → Seller → Dashboard, Listing Management, Orders, Earnings, Subscription & Plan (read-only).\nDelete account: Account → Account details → Delete account (please use a new test account, not the demo accounts).\n\n3. PAYMENTS (LIVE)\nThis is the production build: payments are real. Please go through checkout up to the payment screen; there is no need to complete a payment.{{COUPON_NOTE}}\nIn-app purchases are only for physical goods and in-person services sold by third-party sellers, paid via Stripe (card/Apple Pay), PayPal or Korapay. No digital goods are sold in the app. Seller plans are business tools managed on our website; the app has no plan purchase, prices or links for them.\n\n4. EXTERNAL SERVICES\nStripe, PayPal, Korapay (payments); Mailjet (email); Firebase/APNs via Expo (push); our own Node.js API and Socket.IO chat; Sentry (crash reports); Anthropic Claude API (optional AI help drafting seller listing text).\n\n5. REGIONAL DIFFERENCES\nFeatures are the same everywhere. Prices show in the user's local currency. Users paying in African currencies (NGN, GHS, KES, ZAR, etc.) check out with Korapay instead of Stripe. Selling is currently open to Nigeria-based sellers.\n\n6. REGULATED CONTENT\nNot a regulated-industry app. Sellers are independent third parties bound by our Terms (https://afomamarketplace.com/terms-conditions); listings are moderated and can be reported."
     }
   }
 }

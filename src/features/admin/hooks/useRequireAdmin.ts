@@ -2,7 +2,8 @@ import { useCallback } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 import { useAuth } from '../../auth/hooks/useAuth';
-import { openAuthLogin, type AuthReturnTo } from '../../auth/utils/authNavigation';
+import { useAuthGateRedirect } from '../../auth/hooks/useAuthGateRedirect';
+import type { AuthReturnTo } from '../../auth/utils/authNavigation';
 
 export function useRequireAdmin(returnTo?: AuthReturnTo) {
   const navigation = useNavigation();
@@ -12,6 +13,8 @@ export function useRequireAdmin(returnTo?: AuthReturnTo) {
   const isAdmin = role === 'admin';
   const isAuthorized = isAuthenticated && isAdmin && hasAccessToken;
 
+  useAuthGateRedirect({ needsLogin: !isAuthenticated, isLoading, returnTo });
+
   useFocusEffect(
     useCallback(() => {
       if (isLoading) {
@@ -19,7 +22,6 @@ export function useRequireAdmin(returnTo?: AuthReturnTo) {
       }
 
       if (!isAuthenticated) {
-        openAuthLogin(navigation, returnTo);
         return;
       }
 
@@ -28,7 +30,7 @@ export function useRequireAdmin(returnTo?: AuthReturnTo) {
           navigation.goBack();
         }
       }
-    }, [isAdmin, isAuthenticated, isLoading, navigation, returnTo]),
+    }, [isAdmin, isAuthenticated, isLoading, navigation]),
   );
 
   return {

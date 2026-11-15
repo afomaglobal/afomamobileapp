@@ -27,7 +27,6 @@ import { authReturnTo } from '../../auth/utils/authNavigation';
 import { useRequireSeller } from '../hooks/useRequireSeller';
 import { useSellerProfile } from '../hooks/useSellerProfile';
 import { ProductMediaPicker } from '../products/components/ProductMediaPicker';
-import { ListingFeePaymentModal } from '../membership/components/ListingFeePaymentModal';
 import { useDownloadableProductWizard } from '../products/hooks/useDownloadableProductWizard';
 import { useSellerProductCategories } from '../products/hooks/useSellerProductCategories';
 import { navigateToIncompleteSellerSetup } from '../products/utils/sellerProductCreationNavigation';
@@ -344,7 +343,6 @@ export function SellerDownloadableProductScreen({ navigation, route }: Props) {
           ) : null}
         </View>
     </KeyboardAwareFormScreen>
-    <ListingFeePaymentModal {...wizard.listingFeeModalProps} />
     </>
   );
 }

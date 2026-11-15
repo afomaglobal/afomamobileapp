@@ -1,31 +1,12 @@
 import type { SellerProductCreatePayload } from '../api/sellerProductsApi';
 import { createProduct } from '../api/sellerProductsApi';
 import type { Product } from '../../../../services/types/product';
-import {
-  parseProductTierError,
-  type ProductTierGateError,
-} from './productTierErrors';
 
-export async function createProductWithTierGate(
-  payload: SellerProductCreatePayload,
-  requestListingFeePayment: (error: ProductTierGateError) => Promise<string | null>,
-): Promise<Product> {
-  try {
-    return await createProduct(payload);
-  } catch (error) {
-    const tierError = parseProductTierError(error);
-    if (tierError?.code === 'LISTING_FEE_REQUIRED') {
-      const listingFeePaymentRef = await requestListingFeePayment(tierError);
-      if (!listingFeePaymentRef) {
-        throw error;
-      }
-
-      return createProduct({
-        ...payload,
-        listingFeePaymentRef,
-      });
-    }
-
-    throw error;
-  }
+/**
+ * Creates a product. Listing fees are never paid in the mobile apps (plans and fees are
+ * handled on the website only — App Store 3.1.1 / Play payments policy), so a
+ * LISTING_FEE_REQUIRED error is surfaced to the caller like any other tier error.
+ */
+export async function createProductWithTierGate(payload: SellerProductCreatePayload): Promise<Product> {
+  return createProduct(payload);
 }

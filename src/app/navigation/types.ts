@@ -4,7 +4,6 @@ import type { ReferralCommissionRecord } from '../../features/account/referral-e
 import type { AuthReturnTo } from '../../features/auth/utils/authNavigation';
 import type { AdminStackParamList } from '../../features/admin/navigation/adminTypes';
 import type { OrderSummary } from '../../services/types/order';
-import type { SellerBillingCycle, SellerMembershipTierId, MembershipWalletSnapshot } from '../../features/seller/membership/types/sellerMembership';
 import type { SellerStackParamList } from './sellerTypes';
 
 export type AuthStackParamList = {
@@ -15,20 +14,8 @@ export type AuthStackParamList = {
     returnTo?: AuthReturnTo;
   };
   RegisterChoice: undefined;
-  SellerPlanPicker: { country?: string } | undefined;
   RegisterAccount: {
     accountType: 'buyer' | 'seller';
-    membershipTier?: SellerMembershipTierId;
-    billingCycle?: SellerBillingCycle;
-  };
-  SellerMembershipCheckout: {
-    sellerId: string;
-    membershipTier: SellerMembershipTierId;
-    billingCycle: SellerBillingCycle;
-    email?: string;
-    mode?: 'registration' | 'activation' | 'upgrade' | 'renewal';
-    walletBalanceCad?: number;
-    wallet?: MembershipWalletSnapshot;
   };
   RegistrationSuccess: {
     accountType: 'buyer' | 'seller';

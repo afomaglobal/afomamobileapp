@@ -7,7 +7,10 @@ interface UserChatsResponse {
 
 interface ChatMessagesResponse {
   chatId: string;
+  /** Oldest → newest. Page 0 (skip 0) is the newest messages. */
   messages: ChatMessage[];
+  /** True when older messages exist beyond this page (newer backends only). */
+  hasMore?: boolean;
 }
 
 export async function fetchUserChats(userId: string): Promise<ChatSummary[]> {

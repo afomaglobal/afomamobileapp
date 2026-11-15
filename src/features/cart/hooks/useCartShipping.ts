@@ -49,6 +49,14 @@ interface UseCartShippingParams {
   getLatestCart: () => CartMap;
 }
 
+/** Line keys + quantities — a shipping result is only valid for this exact composition. */
+function cartCompositionSignature(cart: CartMap): string {
+  return Object.entries(cart)
+    .map(([itemId, line]) => `${itemId}:${line.orderQuantiy ?? 1}`)
+    .sort()
+    .join('|');
+}
+
 export function useCartShipping({
   cart,
   checkoutCart,
@@ -56,7 +64,6 @@ export function useCartShipping({
   authUserId,
   replaceCart,
   setShippingTotals,
-  getCartLineKeys,
   getLatestCart,
 }: UseCartShippingParams) {
   const ratesCart = checkoutCart ?? cart;
@@ -148,7 +155,11 @@ export function useCartShipping({
 
   const persistCartShipping = useCallback(
     async (nextCart: CartMap, displayShippingTotal: number) => {
-      const scheduledLineKeys = Object.keys(nextCart).sort().join('|');
+      // Compare quantities too, not just line keys: a +/- tap while this was in flight used to
+      // let stale shipping totals overwrite the freshly reset ones.
+      const scheduledComposition = cartCompositionSignature(nextCart);
+      const isStillCurrent = () =>
+        cartCompositionSignature(getLatestCart()) === scheduledComposition;
 
       const currencyRate = userInfo.currencyRate ?? 1;
       const { totalShippingRate, fetchedShippingRate } = computePersistedShippingTotals(
@@ -157,15 +168,11 @@ export function useCartShipping({
         currencyRate,
       );
 
-      if (getCartLineKeys() !== scheduledLineKeys) {
+      if (!isStillCurrent()) {
         return;
       }
 
       const liveCart = getLatestCart();
-      const liveLineKeys = Object.keys(liveCart).sort().join('|');
-      if (liveLineKeys !== scheduledLineKeys) {
-        return;
-      }
 
       if (authUserId) {
         await persistCart(authUserId, liveCart, {
@@ -176,13 +183,13 @@ export function useCartShipping({
         await saveGuestCart(liveCart);
       }
 
-      if (getCartLineKeys() !== scheduledLineKeys) {
+      if (!isStillCurrent()) {
         return;
       }
 
       setShippingTotals(totalShippingRate, fetchedShippingRate);
     },
-    [authUserId, getCartLineKeys, getLatestCart, setShippingTotals, userInfo.currencyRate],
+    [authUserId, getLatestCart, setShippingTotals, userInfo.currencyRate],
   );
 
   const shippingRatesRequestKey = useMemo(

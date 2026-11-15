@@ -11,11 +11,16 @@ import {
 } from '../utils/chatDisplay';
 import {
   connectChatSocket,
+  deleteChatMessage,
+  editChatMessage,
+  ensureChatSocketConnected,
   getChatSocket,
   joinChatRoom,
   markChatMessageRead,
   sendChatMessage,
+  toggleChatReaction,
 } from '../../../services/socket/chatSocket';
+import { emitChatUnreadEvent } from '../utils/chatUnreadEvents';
 import { getErrorMessage } from '../../../services/api/errors';
 
 interface UseChatThreadOptions {
@@ -74,6 +79,10 @@ export function useChatThread(options: UseChatThreadOptions) {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestVersionRef = useRef(0);
+  const [wasDeleted, setWasDeleted] = useState(false);
+  const [hasOlder, setHasOlder] = useState(false);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+  const lastMarkedReadRef = useRef<string | null>(null);
 
   const refreshMessages = useCallback(async () => {
     if (!userId || !activeChatId) {
@@ -102,6 +111,7 @@ export function useChatThread(options: UseChatThreadOptions) {
       }
 
       setMessages(Array.isArray(response.messages) ? response.messages : []);
+      setHasOlder(Boolean(response.hasMore));
       setHasLoadedOnce(true);
     } catch (caught) {
       if (requestVersionRef.current !== version) {
@@ -132,6 +142,90 @@ export function useChatThread(options: UseChatThreadOptions) {
     joinChatRoom(activeChatId);
     void refreshMessages();
   }, [activeChatId, refreshMessages]);
+
+  // Opening a chat marks it read. Before, only messages that arrived while the thread was open
+  // were marked, so anything already waiting stayed "unread" forever. The server clears the
+  // chat's unread count when any message in it is marked read, so the newest unread is enough.
+  useEffect(() => {
+    if (!userId || !activeChatId || isTempChatId(activeChatId) || !hasLoadedOnce) {
+      return;
+    }
+
+    const lastUnread = [...messages]
+      .reverse()
+      .find(
+        (message) =>
+          message.sender !== userId &&
+          !message.optimistic &&
+          !message._id.startsWith('local-') &&
+          !(message.readBy ?? []).includes(userId),
+      );
+
+    const chatHasUnread = (resolvedChat?.unreadCount ?? 0) > 0;
+    const target = lastUnread ?? (chatHasUnread ? [...messages].reverse().find((m) => m.sender !== userId) : undefined);
+    if (!target || lastMarkedReadRef.current === target._id) {
+      return;
+    }
+
+    lastMarkedReadRef.current = target._id;
+    void ensureChatSocketConnected().then(() => {
+      markChatMessageRead({ messageId: target._id, userId, chatId: activeChatId });
+    });
+    setMessages((current) =>
+      current.map((message) =>
+        message.sender !== userId && !(message.readBy ?? []).includes(userId)
+          ? { ...message, readBy: [...(message.readBy ?? []), userId] }
+          : message,
+      ),
+    );
+    emitChatUnreadEvent({ type: 'read', chatId: activeChatId });
+  }, [activeChatId, hasLoadedOnce, messages, resolvedChat?.unreadCount, userId]);
+
+  // Live edits, deletions and reactions from either participant.
+  useEffect(() => {
+    if (!activeChatId || isTempChatId(activeChatId)) {
+      return;
+    }
+
+    const socket = getChatSocket();
+    if (!socket) {
+      return;
+    }
+
+    const replaceMessage = (updated: ChatMessage) => {
+      if (!updated?._id) return;
+      setMessages((current) =>
+        current.map((message) =>
+          message._id === updated._id ? { ...message, ...updated, chatId: message.chatId } : message,
+        ),
+      );
+    };
+    const handleDeleted = ({ messageId }: { messageId?: string }) => {
+      if (!messageId) return;
+      setMessages((current) =>
+        current.map((message) =>
+          message._id === messageId ? { ...message, isDeleted: true } : message,
+        ),
+      );
+    };
+    const handleChatDeleted = ({ chatId: deletedId }: { chatId?: string }) => {
+      if (deletedId && String(deletedId) === activeChatId) {
+        setWasDeleted(true);
+      }
+    };
+
+    socket.on('message_edited', replaceMessage);
+    socket.on('reaction_added', replaceMessage);
+    socket.on('message_deleted', handleDeleted);
+    socket.on('chat_deleted', handleChatDeleted);
+
+    return () => {
+      socket.off('message_edited', replaceMessage);
+      socket.off('reaction_added', replaceMessage);
+      socket.off('message_deleted', handleDeleted);
+      socket.off('chat_deleted', handleChatDeleted);
+    };
+  }, [activeChatId]);
 
   useEffect(() => {
     if (!userId || !activeChatId) {
@@ -277,7 +371,103 @@ export function useChatThread(options: UseChatThreadOptions) {
     return 'Messages';
   }, [resolvedChat, userId, viewerRole]);
 
+  /** Loads the page of messages before the oldest one shown. */
+  const loadOlderMessages = useCallback(async () => {
+    if (!activeChatId || isTempChatId(activeChatId) || isLoadingOlder || !hasOlder) return;
+
+    const loadedFromServer = messages.filter(
+      (message) => !message.optimistic && !message._id.startsWith('local-'),
+    ).length;
+
+    setIsLoadingOlder(true);
+    try {
+      const response = await fetchChatMessages(activeChatId, { skip: loadedFromServer });
+      const older = Array.isArray(response.messages) ? response.messages : [];
+      setMessages((current) => {
+        const known = new Set(current.map((message) => message._id));
+        return [...older.filter((message) => !known.has(message._id)), ...current];
+      });
+      setHasOlder(Boolean(response.hasMore));
+    } catch (caught) {
+      setError(getErrorMessage(caught, 'Could not load earlier messages'));
+    } finally {
+      setIsLoadingOlder(false);
+    }
+  }, [activeChatId, hasOlder, isLoadingOlder, messages]);
+
+  const editMessage = useCallback(
+    async (messageId: string, nextText: string) => {
+      const trimmed = nextText.trim();
+      if (!trimmed) return false;
+
+      const previous = messages.find((message) => message._id === messageId);
+      setMessages((current) =>
+        current.map((message) =>
+          message._id === messageId ? { ...message, text: trimmed, edited: true } : message,
+        ),
+      );
+
+      const response = await editChatMessage(messageId, trimmed);
+      if (response.status !== 'ok') {
+        if (previous) {
+          setMessages((current) =>
+            current.map((message) => (message._id === messageId ? previous : message)),
+          );
+        }
+        setError(response.error || 'Could not edit message');
+        return false;
+      }
+      return true;
+    },
+    [messages],
+  );
+
+  const deleteMessage = useCallback(async (messageId: string) => {
+    setMessages((current) =>
+      current.map((message) =>
+        message._id === messageId ? { ...message, isDeleted: true } : message,
+      ),
+    );
+    const result = await deleteChatMessage(messageId);
+    if (result.status !== 'ok') {
+      setError(result.error || 'Could not delete message.');
+      void refreshMessages();
+    }
+  }, [refreshMessages]);
+
+  const toggleReaction = useCallback(
+    async (messageId: string, type: string) => {
+      if (!userId) return;
+      // Same rule as the server: one reaction per user; picking the same one removes it.
+      setMessages((current) =>
+        current.map((message) => {
+          if (message._id !== messageId) return message;
+          const reactions = message.reactions ?? [];
+          const mine = reactions.find((reaction) => String(reaction.user) === userId);
+          const others = reactions.filter((reaction) => String(reaction.user) !== userId);
+          return {
+            ...message,
+            reactions: mine?.type === type ? others : [...others, { user: userId, type }],
+          };
+        }),
+      );
+      const result = await toggleChatReaction(messageId, type);
+      if (result.status !== 'ok') {
+        setError(result.error || 'Could not react.');
+        void refreshMessages();
+      }
+    },
+    [refreshMessages, userId],
+  );
+
   return {
+    hasOlder,
+    isLoadingOlder,
+    loadOlderMessages,
+    editMessage,
+    deleteMessage,
+    toggleReaction,
+    wasDeleted,
     chat: resolvedChat,
     chatId: activeChatId,
     title,

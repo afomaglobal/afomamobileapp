@@ -29,7 +29,6 @@ import { useRequireSeller } from '../hooks/useRequireSeller';
 import { useSellerProfile } from '../hooks/useSellerProfile';
 import { ProductMediaPicker } from '../products/components/ProductMediaPicker';
 import { ProductShippingEstimateTrigger } from '../products/components/ProductShippingEstimateTrigger';
-import { ListingFeePaymentModal } from '../membership/components/ListingFeePaymentModal';
 import { useCustomizableProductWizard } from '../products/hooks/useCustomizableProductWizard';
 import { useSellerProductCategories } from '../products/hooks/useSellerProductCategories';
 import { navigateToCustomizableVariations } from '../products/utils/sellerProductNavigation';
@@ -326,7 +325,6 @@ export function SellerCustomizableProductScreen({ navigation, route }: Props) {
           ) : null}
         </View>
     </KeyboardAwareFormScreen>
-    <ListingFeePaymentModal {...wizard.listingFeeModalProps} />
     </>
   );
 }

@@ -6,11 +6,6 @@ import type { SellerCoupon } from '../../features/seller/coupons/types/sellerCou
 import type { SellerCommissionRecord } from '../../features/seller/earnings/types/sellerEarning';
 import type { SellerOrderSummary } from '../../features/seller/orders/types/sellerOrder';
 import type { SellerSetupSectionId } from '../../features/seller/types/sellerProfile';
-import type {
-  SellerBillingCycle,
-  SellerMembershipTierId,
-  MembershipWalletSnapshot,
-} from '../../features/seller/membership/types/sellerMembership';
 
 export type SellerStackParamList = {
   SellerAccount: undefined;
@@ -63,15 +58,6 @@ export type SellerStackParamList = {
   };
   SellerMembership: {
     sellerId: string;
-  };
-  SellerMembershipCheckout: {
-    sellerId: string;
-    membershipTier: SellerMembershipTierId;
-    billingCycle: SellerBillingCycle;
-    email?: string;
-    mode?: 'registration' | 'activation' | 'upgrade' | 'renewal';
-    walletBalanceCad?: number;
-    wallet?: MembershipWalletSnapshot;
   };
   SellerCreatorWallet: {
     sellerId: string;

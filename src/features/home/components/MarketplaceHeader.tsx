@@ -19,6 +19,9 @@ export interface MarketplaceHeaderProps {
   onSearchPress: () => void;
   onNotificationsPress?: () => void;
   notificationUnreadCount?: number;
+  /** Shown only for signed-in users. */
+  onMessagesPress?: () => void;
+  messagesUnreadCount?: number;
 }
 
 function getGreetingName(firstName?: string, email?: string): string {
@@ -35,6 +38,8 @@ export function MarketplaceHeader({
   onSearchPress,
   onNotificationsPress,
   notificationUnreadCount = 0,
+  onMessagesPress,
+  messagesUnreadCount = 0,
 }: MarketplaceHeaderProps) {
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated } = useAuth();
@@ -72,6 +77,33 @@ export function MarketplaceHeader({
           >
             <SearchIcon color={colors.textSecondary} size={24} />
           </Pressable>
+          {onMessagesPress && isAuthenticated ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                messagesUnreadCount > 0
+                  ? `Messages, ${messagesUnreadCount} unread`
+                  : 'Messages'
+              }
+              onPress={onMessagesPress}
+              style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+            >
+              <View style={styles.bellWrap}>
+                <Ionicons
+                  name={messagesUnreadCount > 0 ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+                  size={22}
+                  color={colors.textSecondary}
+                />
+                {messagesUnreadCount > 0 ? (
+                  <View style={styles.badge}>
+                    <AppText variant="caption" style={styles.badgeText}>
+                      {messagesUnreadCount > 9 ? '9+' : String(messagesUnreadCount)}
+                    </AppText>
+                  </View>
+                ) : null}
+              </View>
+            </Pressable>
+          ) : null}
           {onNotificationsPress ? (
             <Pressable
               accessibilityRole="button"

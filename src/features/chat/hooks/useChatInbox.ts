@@ -8,6 +8,7 @@ import {
 } from '../../../services/cache/screenCache';
 import { connectChatSocket, getChatSocket } from '../../../services/socket/chatSocket';
 import { getErrorMessage } from '../../../services/api/errors';
+import { subscribeChatUnreadEvents } from '../utils/chatUnreadEvents';
 
 function hydrateInbox(userId?: string) {
   if (!userId) {
@@ -133,10 +134,52 @@ export function useChatInbox(userId?: string) {
       });
     };
 
+    const updateChats = (updater: (current: ChatSummary[]) => ChatSummary[]) => {
+      setChats((current) => {
+        const next = updater(current);
+        if (next !== current) {
+          setChatInboxCache(userId, next);
+        }
+        return next;
+      });
+    };
+
+    const markRead = (chatId: string) =>
+      updateChats((current) =>
+        current.some((chat) => chat._id === chatId && (chat.unreadCount ?? 0) > 0)
+          ? current.map((chat) => (chat._id === chatId ? { ...chat, unreadCount: 0 } : chat))
+          : current,
+      );
+
+    const removeChat = (chatId: string) =>
+      updateChats((current) =>
+        current.some((chat) => chat._id === chatId)
+          ? current.filter((chat) => chat._id !== chatId)
+          : current,
+      );
+
+    const handleMessageRead = (payload: { chatId?: string; userId?: string }) => {
+      if (payload?.chatId && String(payload.userId) === userId) {
+        markRead(String(payload.chatId));
+      }
+    };
+    const handleChatDeleted = (payload: { chatId?: string }) => {
+      if (payload?.chatId) removeChat(String(payload.chatId));
+    };
+
     socket.on('new_message', handleNewMessage);
+    socket.on('message_read', handleMessageRead);
+    socket.on('chat_deleted', handleChatDeleted);
+    const unsubscribeLocal = subscribeChatUnreadEvents((event) => {
+      if (event.type === 'read') markRead(event.chatId);
+      else removeChat(event.chatId);
+    });
 
     return () => {
       socket.off('new_message', handleNewMessage);
+      socket.off('message_read', handleMessageRead);
+      socket.off('chat_deleted', handleChatDeleted);
+      unsubscribeLocal();
     };
   }, [refresh, userId]);
 

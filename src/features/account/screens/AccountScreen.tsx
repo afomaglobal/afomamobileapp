@@ -32,7 +32,7 @@ import { AccountProfileHeader } from '../components/AccountProfileHeader';
 import { AccountMembershipBanner } from '../components/AccountMembershipBanner';
 import { AccountSellerSetupCard } from '../components/AccountSellerSetupCard';
 import { useSellerMembership } from '../../seller/membership/hooks/useSellerMembership';
-import { formatCommissionPercent, formatSubscriptionStatus } from '../../seller/membership/utils/membershipDisplay';
+import { formatCommissionPercent, formatSellerPlanStatusLabel } from '../../seller/membership/utils/membershipDisplay';
 import type { MainTabParamList, RootStackParamList, ShoppingStackParamList } from '../../../app/navigation/types';
 import { getStorefrontBaseUrl } from '../../../utils/storefrontUrl';
 
@@ -317,15 +317,9 @@ export function AccountScreen(_props: Props) {
             ) : null}
             {membership ? (
               <AccountMembershipBanner
-                tierName={membership.tierName}
-                subtitle={`${formatCommissionPercent(membership.commissionPercent)} commission · ${formatSubscriptionStatus(
-                  membership.subscriptionStatus,
-                  {
-                    requiresPayment: membership.requiresPayment,
-                    isSubscriptionActive: membership.isSubscriptionActive,
-                    membershipTier: membership.membershipTier,
-                    billingCycle: membership.billingCycle,
-                  },
+                tierName={membership.isOnTrial ? 'Free trial' : membership.tierName}
+                subtitle={`${formatCommissionPercent(membership.commissionPercent)} commission · ${formatSellerPlanStatusLabel(
+                  membership,
                 )}`}
                 onPress={() => sellerId && goSeller('SellerMembership', { sellerId })}
               />

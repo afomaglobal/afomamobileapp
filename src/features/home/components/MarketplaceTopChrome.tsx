@@ -5,17 +5,21 @@ import { colors } from '../../../design-system';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { resolveBackendUserDocumentId } from '../../auth/utils/resolveBackendUserDocumentId';
 import { useBellNotifications } from '../../notifications/hooks/useBellNotifications';
+import { useChatUnreadTotal } from '../../chat/hooks/useChatUnreadTotal';
+import { resolveChatUserId } from '../../chat/utils/resolveChatUserId';
 
 export interface MarketplaceTopChromeProps {
   onProfilePress: () => void;
   onSearchPress: () => void;
   onNotificationsPress?: () => void;
+  onMessagesPress?: () => void;
 }
 
 export function MarketplaceTopChrome({
   onProfilePress,
   onSearchPress,
   onNotificationsPress,
+  onMessagesPress,
 }: MarketplaceTopChromeProps) {
   const { isAuthenticated, user } = useAuth();
   const userId = resolveBackendUserDocumentId(user);
@@ -23,6 +27,9 @@ export function MarketplaceTopChrome({
     userId: isAuthenticated ? userId : undefined,
     enabled: isAuthenticated,
   });
+  const { total: messagesUnreadCount } = useChatUnreadTotal(
+    isAuthenticated ? resolveChatUserId(user) : undefined,
+  );
 
   return (
     <View style={styles.container}>
@@ -31,6 +38,8 @@ export function MarketplaceTopChrome({
         onSearchPress={onSearchPress}
         onNotificationsPress={onNotificationsPress}
         notificationUnreadCount={unreadCount}
+        onMessagesPress={onMessagesPress}
+        messagesUnreadCount={messagesUnreadCount}
       />
     </View>
   );

@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { Alert, Linking } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Linking } from 'react-native';
 
 import { getErrorMessage } from '../../../services/api/errors';
 import {
@@ -7,6 +7,7 @@ import {
   submitChatReport,
   type ChatReportReason,
 } from '../api/chatModerationApi';
+import type { ChatActionSheetOption, ChatActionSheetProps } from '../components/ChatActionSheet';
 
 export const CHAT_SUPPORT_EMAIL = 'contact@afoma.io';
 
@@ -21,121 +22,224 @@ const REPORT_REASON_LABELS: Record<ChatReportReason, string> = {
 export interface UseChatSafetyActionsOptions {
   reportedUserId?: string;
   chatId?: string;
-  messageId?: string;
   onBlocked?: () => void;
+  /** Adds "Delete conversation" to the menu when provided. */
+  onDeleteConversation?: () => Promise<void>;
 }
 
+type SheetState =
+  | { kind: 'closed' }
+  | { kind: 'menu' }
+  | { kind: 'report'; messageId?: string }
+  | { kind: 'block' }
+  | { kind: 'deleteChat' }
+  | { kind: 'result'; title: string; message: string; after?: () => void };
+
+/**
+ * Chat safety flows (report, block, support, delete conversation) rendered in ONE in-app sheet
+ * whose content switches between steps — never an alert opening another alert, which is what
+ * froze the app before.
+ */
 export function useChatSafetyActions(options: UseChatSafetyActionsOptions) {
-  const { reportedUserId, chatId, messageId, onBlocked } = options;
+  const { reportedUserId, chatId, onBlocked, onDeleteConversation } = options;
+  const [sheet, setSheet] = useState<SheetState>({ kind: 'closed' });
   const [isBusy, setIsBusy] = useState(false);
+
+  const close = useCallback(() => {
+    if (isBusy) return;
+    const after = sheet.kind === 'result' ? sheet.after : undefined;
+    setSheet({ kind: 'closed' });
+    after?.();
+  }, [isBusy, sheet]);
 
   const openSupportEmail = useCallback(() => {
     const subject = encodeURIComponent('AFOMA app support');
     const body = encodeURIComponent(
       chatId ? `Chat ID: ${chatId}\n\nDescribe your concern:` : 'Describe your concern:',
     );
+    setSheet({ kind: 'closed' });
     void Linking.openURL(`mailto:${CHAT_SUPPORT_EMAIL}?subject=${subject}&body=${body}`);
   }, [chatId]);
 
   const submitReport = useCallback(
-    async (reason: ChatReportReason) => {
-      if (!reportedUserId || isBusy) {
-        return;
-      }
-
+    async (reason: ChatReportReason, messageId?: string) => {
+      if (!reportedUserId) return;
       setIsBusy(true);
       try {
-        const result = await submitChatReport({
-          reportedUserId,
-          chatId,
-          messageId,
-          reason,
+        const result = await submitChatReport({ reportedUserId, chatId, messageId, reason });
+        setSheet({
+          kind: 'result',
+          title: 'Report submitted',
+          message: `${result.message}\n\nOur team will review this report. You can also email ${result.supportContact || CHAT_SUPPORT_EMAIL}.`,
         });
-        Alert.alert(
-          'Report submitted',
-          `${result.message}\n\nOur team will review this report. You can also email ${result.supportContact}.`,
-        );
       } catch (error) {
-        Alert.alert('Report failed', getErrorMessage(error, 'Could not submit report'));
+        setSheet({
+          kind: 'result',
+          title: 'Report failed',
+          message: getErrorMessage(error, 'Could not submit report'),
+        });
       } finally {
         setIsBusy(false);
       }
     },
-    [chatId, isBusy, messageId, reportedUserId],
+    [chatId, reportedUserId],
   );
 
-  const openReportReasonPicker = useCallback(() => {
-    if (!reportedUserId) {
-      return;
+  const blockUser = useCallback(async () => {
+    if (!reportedUserId) return;
+    setIsBusy(true);
+    try {
+      await blockChatUser(reportedUserId);
+      setSheet({
+        kind: 'result',
+        title: 'User blocked',
+        message: 'Messaging with this account is disabled.',
+        after: onBlocked,
+      });
+    } catch (error) {
+      setSheet({
+        kind: 'result',
+        title: 'Block failed',
+        message: getErrorMessage(error, 'Could not block user'),
+      });
+    } finally {
+      setIsBusy(false);
     }
+  }, [onBlocked, reportedUserId]);
 
-    Alert.alert(
-      'Report user',
-      'Tell us what happened. Reports are sent to our support team.',
-      [
-        ...(Object.entries(REPORT_REASON_LABELS) as Array<[ChatReportReason, string]>).map(
-          ([reason, label]) => ({
-            text: label,
-            onPress: () => {
-              void submitReport(reason);
+  const deleteConversation = useCallback(async () => {
+    if (!onDeleteConversation) return;
+    setIsBusy(true);
+    try {
+      await onDeleteConversation();
+      setSheet({ kind: 'closed' });
+    } catch (error) {
+      setSheet({
+        kind: 'result',
+        title: 'Delete failed',
+        message: getErrorMessage(error, 'Could not delete conversation'),
+      });
+    } finally {
+      setIsBusy(false);
+    }
+  }, [onDeleteConversation]);
+
+  const sheetProps = useMemo((): ChatActionSheetProps => {
+    const base = { visible: sheet.kind !== 'closed', onClose: close, busy: isBusy };
+
+    switch (sheet.kind) {
+      case 'menu': {
+        const menuOptions: ChatActionSheetOption[] = [];
+        if (reportedUserId) {
+          menuOptions.push(
+            {
+              key: 'report',
+              label: 'Report user',
+              icon: 'flag-outline',
+              onPress: () => setSheet({ kind: 'report' }),
             },
-          }),
-        ),
-        { text: 'Cancel', style: 'cancel' as const },
-      ],
-    );
-  }, [reportedUserId, submitReport]);
-
-  const confirmBlockUser = useCallback(() => {
-    if (!reportedUserId || isBusy) {
-      return;
+            {
+              key: 'block',
+              label: 'Block user',
+              icon: 'ban-outline',
+              destructive: true,
+              onPress: () => setSheet({ kind: 'block' }),
+            },
+          );
+        }
+        if (onDeleteConversation) {
+          menuOptions.push({
+            key: 'delete',
+            label: 'Delete conversation',
+            icon: 'trash-outline',
+            destructive: true,
+            onPress: () => setSheet({ kind: 'deleteChat' }),
+          });
+        }
+        menuOptions.push({
+          key: 'email',
+          label: `Email ${CHAT_SUPPORT_EMAIL}`,
+          icon: 'mail-outline',
+          onPress: openSupportEmail,
+        });
+        return { ...base, title: 'Chat options', options: menuOptions };
+      }
+      case 'report': {
+        const messageId = sheet.messageId;
+        return {
+          ...base,
+          title: messageId ? 'Report message' : 'Report user',
+          message: 'Tell us what happened. Reports are sent to our support team.',
+          options: (Object.entries(REPORT_REASON_LABELS) as Array<[ChatReportReason, string]>).map(
+            ([reason, label]) => ({
+              key: reason,
+              label,
+              onPress: () => void submitReport(reason, messageId),
+            }),
+          ),
+        };
+      }
+      case 'block':
+        return {
+          ...base,
+          title: 'Block user',
+          message:
+            'You will no longer receive messages from this user. You can contact support if you need help.',
+          options: [
+            {
+              key: 'confirm',
+              label: 'Block user',
+              icon: 'ban-outline',
+              destructive: true,
+              onPress: () => void blockUser(),
+            },
+          ],
+        };
+      case 'deleteChat':
+        return {
+          ...base,
+          title: 'Delete conversation?',
+          message:
+            'This removes the conversation and all its messages for both you and the other person. This can’t be undone.',
+          options: [
+            {
+              key: 'confirm',
+              label: 'Delete conversation',
+              icon: 'trash-outline',
+              destructive: true,
+              onPress: () => void deleteConversation(),
+            },
+          ],
+        };
+      case 'result':
+        return { ...base, title: sheet.title, message: sheet.message, options: [], cancelLabel: 'Done' };
+      default:
+        return { ...base, visible: false };
     }
-
-    Alert.alert(
-      'Block user',
-      'You will no longer receive messages from this user. You can contact support if you need help.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Block user',
-          style: 'destructive',
-          onPress: () => {
-            void (async () => {
-              setIsBusy(true);
-              try {
-                await blockChatUser(reportedUserId);
-                Alert.alert('User blocked', 'Messaging with this account is disabled.');
-                onBlocked?.();
-              } catch (error) {
-                Alert.alert('Block failed', getErrorMessage(error, 'Could not block user'));
-              } finally {
-                setIsBusy(false);
-              }
-            })();
-          },
-        },
-      ],
-    );
-  }, [isBusy, onBlocked, reportedUserId]);
-
-  const openSafetyMenu = useCallback(() => {
-    if (!reportedUserId) {
-      return;
-    }
-
-    Alert.alert('Chat safety', undefined, [
-      { text: 'Report user', onPress: openReportReasonPicker },
-      { text: 'Block user', style: 'destructive', onPress: confirmBlockUser },
-      { text: `Email ${CHAT_SUPPORT_EMAIL}`, onPress: openSupportEmail },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  }, [confirmBlockUser, openReportReasonPicker, openSupportEmail, reportedUserId]);
+  }, [
+    blockUser,
+    close,
+    deleteConversation,
+    isBusy,
+    onDeleteConversation,
+    openSupportEmail,
+    reportedUserId,
+    sheet,
+    submitReport,
+  ]);
 
   return {
     isBusy,
-    openSafetyMenu,
-    openReportReasonPicker,
-    confirmBlockUser,
+    sheetProps,
+    openSafetyMenu: useCallback(() => setSheet({ kind: 'menu' }), []),
+    openReportReasonPicker: useCallback(
+      (messageId?: string) => reportedUserId && setSheet({ kind: 'report', messageId }),
+      [reportedUserId],
+    ),
+    confirmBlockUser: useCallback(
+      () => reportedUserId && setSheet({ kind: 'block' }),
+      [reportedUserId],
+    ),
     openSupportEmail,
   };
 }

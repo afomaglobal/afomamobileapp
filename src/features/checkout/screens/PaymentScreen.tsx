@@ -195,6 +195,8 @@ function PaymentScreenBody({ route }: Props) {
   }, [checkApplePaySupport]);
 
   const showKorapay = usesKorapayCheckout(currency);
+  /** PayPal can't charge in Naira — Nigerian (NGN) shoppers pay with Korapay only. */
+  const hidePayPal = currency.toUpperCase() === 'NGN';
 
   useEffect(() => {
     if (showKorapay && selectedPayment === 'stripe') {
@@ -274,13 +276,15 @@ function PaymentScreenBody({ route }: Props) {
         });
       }
 
-      methods.push({
-        id: 'paypal',
-        label: 'PayPal',
-        subtitle: maskedPayerEmail ?? 'Pay with your PayPal account',
-        icon: 'logo-paypal',
-        external: true,
-      });
+      if (!hidePayPal) {
+        methods.push({
+          id: 'paypal',
+          label: 'PayPal',
+          subtitle: maskedPayerEmail ?? 'Pay with your PayPal account',
+          icon: 'logo-paypal',
+          external: true,
+        });
+      }
 
       if (!showKorapay) {
         methods.push({
@@ -308,6 +312,7 @@ function PaymentScreenBody({ route }: Props) {
   }, [
     applePayBuildReady,
     applePaySupported,
+    hidePayPal,
     isAuthenticated,
     maskedPayerEmail,
     payAtVenueEligible,
@@ -325,8 +330,8 @@ function PaymentScreenBody({ route }: Props) {
       return 'applepay';
     }
 
-    return 'paypal';
-  }, [isAuthenticated, payAtVenueEligible, paymentMethods]);
+    return hidePayPal ? 'korapay' : 'paypal';
+  }, [hidePayPal, isAuthenticated, payAtVenueEligible, paymentMethods]);
 
   useEffect(() => {
     setSelectedPayment((current) => {

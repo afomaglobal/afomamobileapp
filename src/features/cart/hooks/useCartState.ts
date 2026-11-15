@@ -60,6 +60,8 @@ export function useCartState(userId?: string, userInfo?: UserPricingInfo, access
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const cartMutationRef = useRef(0);
   const latestCartRef = useRef<CartMap>(initialCart);
+  const quantityWriteRef = useRef<Promise<void> | null>(null);
+  const quantityWritePendingRef = useRef(false);
 
   useEffect(() => {
     latestCartRef.current = cart;
@@ -339,6 +341,37 @@ export function useCartState(userId?: string, userInfo?: UserPricingInfo, access
     [userId, userInfo],
   );
 
+  /**
+   * Persists the latest cart snapshot, one write at a time. Rapid +/- taps used to fire
+   * overlapping writes that could land out of order (an older quantity winning) and toggled the
+   * stepper's disabled state on every tap. Now taps during an in-flight write just mark the
+   * cart dirty and the newest snapshot is written once the current write finishes.
+   */
+  const flushQuantityWrite = useCallback((): Promise<void> => {
+    if (quantityWriteRef.current) {
+      quantityWritePendingRef.current = true;
+      return quantityWriteRef.current;
+    }
+
+    const run = async () => {
+      do {
+        quantityWritePendingRef.current = false;
+        try {
+          await writeCartToStorage(userId, latestCartRef.current, ZERO_SHIPPING_RATES);
+        } catch (err) {
+          setError(getErrorMessage(err, 'Failed to update cart quantity'));
+        }
+      } while (quantityWritePendingRef.current);
+      notifyCartChanged();
+    };
+
+    const promise = run().finally(() => {
+      quantityWriteRef.current = null;
+    });
+    quantityWriteRef.current = promise;
+    return promise;
+  }, [userId]);
+
   const updateQuantity = useCallback(
     async (itemId: string, nextQuantity: number) => {
       if (nextQuantity < 1) {
@@ -346,7 +379,6 @@ export function useCartState(userId?: string, userInfo?: UserPricingInfo, access
         return;
       }
 
-      setUpdatingItemId(itemId);
       setError(null);
 
       bumpCartMutation();
@@ -358,7 +390,6 @@ export function useCartState(userId?: string, userInfo?: UserPricingInfo, access
         );
       } catch (err) {
         setError(getErrorMessage(err, 'Failed to update cart quantity'));
-        setUpdatingItemId(null);
         return;
       }
 
@@ -372,16 +403,9 @@ export function useCartState(userId?: string, userInfo?: UserPricingInfo, access
       });
       clearCachedShippingRates();
 
-      try {
-        await writeCartToStorage(userId, nextCart, ZERO_SHIPPING_RATES);
-      } catch (err) {
-        setError(getErrorMessage(err, 'Failed to update cart quantity'));
-      } finally {
-        notifyCartChanged();
-        setUpdatingItemId(null);
-      }
+      await flushQuantityWrite();
     },
-    [bumpCartMutation, removeItem, userId],
+    [bumpCartMutation, flushQuantityWrite, removeItem, userId],
   );
 
   const updateVariations = useCallback(

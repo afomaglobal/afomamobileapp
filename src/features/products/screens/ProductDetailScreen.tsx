@@ -24,9 +24,12 @@ import { colors, spacing } from '../../../design-system';
 import { usePdpTheme } from '../../../design-system/pdpTheme';
 
 import { useAuth } from '../../auth/hooks/useAuth';
+import { openAuthLogin } from '../../auth/utils/authNavigation';
+import { useContentReport } from '../../moderation/hooks/useContentReport';
 import { resolveAuthUserId } from '../../auth/utils/resolveAuthUserId';
 import { navigateToCartTab, navigateToShop } from '../../../app/navigation/shoppingNavigation';
 import { ProductDetailBottomDock, type ProductDetailBottomDockMode } from '../components/ProductDetailBottomDock';
+import { isProductHiddenInApp } from '../utils/mobileCatalogPolicy';
 import { useMarketplaceFooterContentInset } from '../../../app/navigation/marketplaceChrome';
 
 import {
@@ -403,6 +406,11 @@ export function ProductDetailScreen({ route, navigation }: Props) {
     });
   }, [product]);
 
+  const { reportListing, reportReview } = useContentReport({
+    isAuthenticated,
+    onRequireSignIn: () => openAuthLogin(navigation, productAuthReturnTo),
+  });
+
   const handleMessageSeller = useCallback(() => {
     openProductSellerChat({
       navigation,
@@ -574,9 +582,19 @@ export function ProductDetailScreen({ route, navigation }: Props) {
 
         : 'Add to Cart';
 
-  const dockButtonLabel = addButtonLabel;
-  const dockButtonDisabled = isSelectionInCart ? false : addButtonDisabled;
-  const ctaMode: ProductDetailAddToCartCtaMode = isSelectionInCart ? 'viewCart' : 'add';
+  // Digital (downloadable) products can't be bought in the mobile apps (App Store 3.1.1 /
+  // Play payments policy). Keep the CTA neutral: no price, link or "buy on website" wording.
+  const isPurchaseUnavailableInApp = isProductHiddenInApp(product);
+  const dockButtonLabel = isPurchaseUnavailableInApp
+    ? 'Not available for purchase in the app'
+    : addButtonLabel;
+  const dockButtonDisabled = isPurchaseUnavailableInApp
+    ? true
+    : isSelectionInCart
+      ? false
+      : addButtonDisabled;
+  const ctaMode: ProductDetailAddToCartCtaMode =
+    isSelectionInCart && !isPurchaseUnavailableInApp ? 'viewCart' : 'add';
 
   const quantityDisabled =
 
@@ -735,6 +753,7 @@ export function ProductDetailScreen({ route, navigation }: Props) {
             reviews={reviews}
             isLoading={isReviewsLoading}
             theme={theme}
+            onReportReview={reportReview}
           />
 
           {product ? (
@@ -743,6 +762,20 @@ export function ProductDetailScreen({ route, navigation }: Props) {
 
           {showSellerPolicies && sellerStorePolicy ? (
             <ProductDetailPoliciesSection policy={sellerStorePolicy} theme={theme} />
+          ) : null}
+
+          {product?._id ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Report this listing"
+              onPress={() => reportListing(String(product._id))}
+              style={styles.reportListingRow}
+              hitSlop={6}
+            >
+              <AppText variant="bodySmall" style={{ color: theme.textSecondary }}>
+                Report this listing
+              </AppText>
+            </Pressable>
           ) : null}
 
           {sellerName ? (
@@ -803,6 +836,11 @@ export function ProductDetailScreen({ route, navigation }: Props) {
 
 
 const styles = StyleSheet.create({
+
+  reportListingRow: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.sm,
+  },
 
   screen: {
     flex: 1,

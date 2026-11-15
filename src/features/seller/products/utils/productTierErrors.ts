@@ -4,8 +4,10 @@ import type { MembershipPriceQuote } from '../../membership/types/sellerMembersh
 export type ProductTierErrorCode =
   | 'LISTING_FEE_REQUIRED'
   | 'CATALOG_LIMIT'
+  | 'TRIAL_CATALOG_LIMIT'
   | 'MONTHLY_LISTING_CAP'
   | 'SUBSCRIPTION_REQUIRED'
+  | 'SELLING_PAUSED'
   | 'SELLER_NOT_FOUND';
 
 export interface ProductTierGateError {
@@ -80,16 +82,28 @@ export function parseProductTierError(error: unknown): ProductTierGateError | nu
   };
 }
 
+/**
+ * User-facing copy for listing gate errors in the mobile apps. Must stay neutral: no prices,
+ * "upgrade" or "pay" calls to action (plans are managed on the website only).
+ */
 export function getProductTierUserMessage(error: ProductTierGateError): string {
   switch (error.code) {
     case 'LISTING_FEE_REQUIRED':
-      return error.message;
+      return "This listing can't be published from the app.";
     case 'CATALOG_LIMIT':
-      return error.message;
+      return error.maxActiveProducts != null
+        ? `You've reached your plan's limit of ${error.maxActiveProducts} active products.`
+        : "You've reached your plan's active product limit.";
+    case 'TRIAL_CATALOG_LIMIT':
+      return error.maxActiveProducts != null
+        ? `Your free trial allows up to ${error.maxActiveProducts} active products.`
+        : error.message;
     case 'MONTHLY_LISTING_CAP':
-      return error.message;
+      return "You've reached this month's new listing allowance for your plan.";
     case 'SUBSCRIPTION_REQUIRED':
-      return 'Complete your membership payment before listing products.';
+      return "Your seller plan isn't active, so new listings can't be published right now.";
+    case 'SELLING_PAUSED':
+      return 'Selling is paused on your account, so new listings can\'t be published right now.';
     default:
       return error.message;
   }

@@ -10,6 +10,7 @@ export interface ChatListItemProps {
   myId: string;
   myRole?: string;
   onPress: () => void;
+  onLongPress?: () => void;
 }
 
 function formatTimestamp(value?: string): string {
@@ -25,7 +26,7 @@ function formatTimestamp(value?: string): string {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-export function ChatListItem({ chat, myId, myRole, onPress }: ChatListItemProps) {
+export function ChatListItem({ chat, myId, myRole, onPress, onLongPress }: ChatListItemProps) {
   const title = getChatTitle(chat, myId, myRole);
   const preview = getLastMessagePreview(chat.lastMessage);
   const unread = chat.unreadCount ?? 0;
@@ -34,6 +35,9 @@ export function ChatListItem({ chat, myId, myRole, onPress }: ChatListItemProps)
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={350}
+      accessibilityHint={onLongPress ? 'Long press for more options' : undefined}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
       <View style={styles.avatar}>

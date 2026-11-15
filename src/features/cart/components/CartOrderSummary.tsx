@@ -14,6 +14,8 @@ export interface CartOrderSummaryProps {
   serviceChargeAmount?: number | null;
   total?: number | null;
   shippingPending?: boolean;
+  /** Carrier rates are being fetched for the current cart. */
+  shippingCalculating?: boolean;
 }
 
 function SummaryRow({
@@ -70,11 +72,20 @@ export function CartOrderSummary({
   serviceChargeAmount = null,
   total = null,
   shippingPending = false,
+  shippingCalculating = false,
 }: CartOrderSummaryProps) {
   const subtotalLabel =
     typeof itemCount === 'number'
       ? `Subtotal (${itemCount} ${itemCount === 1 ? 'item' : 'items'})`
       : 'Subtotal';
+
+  const calculatingValue = (
+    <AppText variant="bodyMedium" color="textMuted" style={styles.calculating}>
+      Calculating…
+    </AppText>
+  );
+  const pendingValue = (amount: number | null | undefined) =>
+    shippingCalculating ? calculatingValue : formatSummaryAmount(shippingPending ? null : amount, currency);
 
   return (
     <View style={styles.section}>
@@ -88,16 +99,16 @@ export function CartOrderSummary({
       ) : null}
       <SummaryRow
         label="Shipping"
-        value={formatSummaryAmount(shippingPending ? null : shippingAmount, currency)}
+        value={pendingValue(shippingAmount)}
       />
       <SummaryRow
         label="Estimated tax & fees"
-        value={formatSummaryAmount(shippingPending ? null : serviceChargeAmount, currency)}
+        value={pendingValue(serviceChargeAmount)}
       />
       <View style={styles.divider} />
       <SummaryRow
         label="Total"
-        value={formatSummaryAmount(shippingPending ? null : total, currency)}
+        value={pendingValue(total)}
         emphasized
         valueColor={colors.textPrimary}
       />
@@ -121,6 +132,9 @@ const styles = StyleSheet.create({
   totalValue: {
     color: colors.textPrimary,
     fontWeight: '700',
+  },
+  calculating: {
+    fontStyle: 'italic',
   },
   divider: {
     borderTopWidth: StyleSheet.hairlineWidth,

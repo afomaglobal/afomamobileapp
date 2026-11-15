@@ -426,6 +426,21 @@ export function dismissAuthFlow(navigation: NavLike) {
   navigateToReturnTo(root, authReturnTo.homeTab());
 }
 
+/**
+ * Leave a protected screen after the user closed the login modal without signing in:
+ * go back if there's somewhere to go, otherwise open the marketplace home tab.
+ */
+export function leaveProtectedScreen(
+  navigation: NavLike & Pick<NavigationProp<ParamListBase>, 'canGoBack' | 'goBack'>,
+) {
+  if (navigation.canGoBack()) {
+    navigation.goBack();
+    return;
+  }
+
+  navigateToReturnTo(getRootNavigation(navigation), authReturnTo.homeTab());
+}
+
 /** Dismiss the auth modal and navigate to a main tab destination. */
 export function dismissAuthAndOpenTab(navigation: NavLike, returnTo: AuthReturnTo) {
   const root = getRootNavigation(navigation);

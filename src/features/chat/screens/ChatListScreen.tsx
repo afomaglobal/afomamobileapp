@@ -1,4 +1,6 @@
+import { useCallback, useRef, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -16,6 +18,12 @@ import { authReturnTo } from '../../auth/utils/authNavigation';
 import { resolveChatUserId } from '../utils/resolveChatUserId';
 import { ChatListItem } from '../components/ChatListItem';
 import { useChatInbox } from '../hooks/useChatInbox';
+import { deleteChat } from '../api/chatApi';
+import { ChatActionSheet } from '../components/ChatActionSheet';
+import { emitChatUnreadEvent } from '../utils/chatUnreadEvents';
+import { getChatTitle } from '../utils/chatDisplay';
+import { getErrorMessage } from '../../../services/api/errors';
+import type { ChatSummary } from '../types/chat';
 
 type Props = NativeStackScreenProps<ShoppingStackParamList, 'ChatList'>;
 
@@ -29,6 +37,45 @@ export function ChatListScreen({ navigation }: Props) {
   const { chats, hasLoadedOnce, isRefreshing, error, refresh } = useChatInbox(
     isAuthorized ? chatUserId : undefined,
   );
+  const [menuChat, setMenuChat] = useState<ChatSummary | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const hasFocusedOnce = useRef(false);
+
+  // Coming back from a conversation: refresh so read state and order are current.
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasFocusedOnce.current) {
+        hasFocusedOnce.current = true;
+        return;
+      }
+      void refresh();
+    }, [refresh]),
+  );
+
+  const closeMenu = () => {
+    if (isDeleting) return;
+    setMenuChat(null);
+    setConfirmDelete(false);
+    setDeleteError(null);
+  };
+
+  const handleDeleteChat = async () => {
+    if (!menuChat) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteChat(menuChat._id);
+      emitChatUnreadEvent({ type: 'deleted', chatId: menuChat._id });
+      setMenuChat(null);
+      setConfirmDelete(false);
+    } catch (caught) {
+      setDeleteError(getErrorMessage(caught, 'Could not delete conversation'));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (!isAuthorized || !chatUserId) {
     return <View style={styles.screen} />;
@@ -51,6 +98,7 @@ export function ChatListScreen({ navigation }: Props) {
                 chatId: item._id,
               })
             }
+            onLongPress={() => setMenuChat(item)}
           />
         )}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void refresh()} />}
@@ -69,6 +117,56 @@ export function ChatListScreen({ navigation }: Props) {
               </AppText>
             </View>
           ) : null
+        }
+      />
+
+      <ChatActionSheet
+        visible={menuChat !== null}
+        onClose={closeMenu}
+        busy={isDeleting}
+        title={
+          confirmDelete
+            ? 'Delete conversation?'
+            : menuChat
+              ? getChatTitle(menuChat, chatUserId, role ?? user?.userRole)
+              : undefined
+        }
+        message={
+          deleteError ??
+          (confirmDelete
+            ? 'This removes the conversation and all its messages for both you and the other person. This can’t be undone.'
+            : undefined)
+        }
+        options={
+          confirmDelete
+            ? [
+                {
+                  key: 'confirm',
+                  label: 'Delete conversation',
+                  icon: 'trash-outline',
+                  destructive: true,
+                  onPress: () => void handleDeleteChat(),
+                },
+              ]
+            : [
+                {
+                  key: 'open',
+                  label: 'Open conversation',
+                  icon: 'chatbubble-outline',
+                  onPress: () => {
+                    const target = menuChat;
+                    closeMenu();
+                    if (target) navigation.navigate('ChatThread', { chatId: target._id });
+                  },
+                },
+                {
+                  key: 'delete',
+                  label: 'Delete conversation',
+                  icon: 'trash-outline',
+                  destructive: true,
+                  onPress: () => setConfirmDelete(true),
+                },
+              ]
         }
       />
 

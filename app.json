@@ -68,7 +68,17 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "@sentry/react-native"
+      "@sentry/react-native",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-dontwarn com.stripe.android.pushProvisioning.**"
+          }
+        }
+      ]
     ],
     "scheme": "afoma",
     "extra": {

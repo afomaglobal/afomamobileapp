@@ -16,6 +16,27 @@ import {
   type CheckoutOrderParams,
 } from '../utils/buildCheckoutOrderPayload';
 
+/**
+ * App-wide: one in-flight capture request per payment. A second caller for the same payment
+ * (another trigger or another Payment screen) reuses the same request instead of sending a new one.
+ */
+const inFlightCaptures = new Map<string, ReturnType<typeof captureCheckoutOrder>>();
+
+function captureCheckoutOrderOnce(
+  paymentOrderId: string,
+  payload: Parameters<typeof captureCheckoutOrder>[0],
+): ReturnType<typeof captureCheckoutOrder> {
+  const existing = inFlightCaptures.get(paymentOrderId);
+  if (existing) {
+    return existing;
+  }
+  const request = captureCheckoutOrder(payload).finally(() => {
+    inFlightCaptures.delete(paymentOrderId);
+  });
+  inFlightCaptures.set(paymentOrderId, request);
+  return request;
+}
+
 export interface CheckoutCaptureResult {
   paymentOrderId: string;
   paymentMethod: CheckoutPaymentMethod;
@@ -79,7 +100,7 @@ export function useCheckoutCapture() {
               paymentMethod,
             )
           : buildCaptureCheckoutOrderPayload(paymentOrderId, params, paymentMethod);
-        const response = await captureCheckoutOrder(payload);
+        const response = await captureCheckoutOrderOnce(paymentOrderId, payload);
 
         if (response.success === false) {
           throw new Error(

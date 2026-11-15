@@ -34,8 +34,9 @@ import { SellerShopSettingsScreen } from '../../features/seller/settings/screens
 import { SellerSetupScreen } from '../../features/seller/screens/SellerSetupScreen';
 import { SellerSetupSectionScreen } from '../../features/seller/screens/SellerSetupSectionScreen';
 import { getSectionTitle } from '../../features/seller/utils/sellerSetupForms';
-import { SellerMembershipScreen } from '../../features/seller/membership/screens/SellerMembershipScreen';
-import { SellerMembershipCheckoutScreen } from '../../features/seller/membership/screens/SellerMembershipCheckoutScreen';
+// Plans are chosen and paid for on the website only (App Store 3.1.1 / Play payments policy):
+// the app shows a read-only plan screen and has no membership checkout.
+import { SellerPlanStatusScreen } from '../../features/seller/membership/screens/SellerPlanStatusScreen';
 import { SellerCreatorWalletScreen } from '../../features/seller/membership/screens/SellerCreatorWalletScreen';
 
 const Stack = createNativeStackNavigator<SellerStackParamList>();
@@ -248,13 +249,8 @@ export function SellerNavigator() {
       />
       <Stack.Screen
         name="SellerMembership"
-        component={SellerMembershipScreen}
+        component={SellerPlanStatusScreen}
         options={{ title: 'Subscription & Plan' }}
-      />
-      <Stack.Screen
-        name="SellerMembershipCheckout"
-        component={SellerMembershipCheckoutScreen}
-        options={{ title: 'Upgrade plan' }}
       />
       <Stack.Screen
         name="SellerCreatorWallet"
