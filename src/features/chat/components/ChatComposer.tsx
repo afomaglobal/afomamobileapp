@@ -8,6 +8,7 @@ import { colors, radius, spacing } from '../../../design-system';
 export interface ChatComposerProps {
   onSend: (text: string) => Promise<boolean>;
   disabled?: boolean;
+  /** @deprecated Sending no longer locks the composer; kept for compatibility. */
   isSending?: boolean;
   /** When set, the composer edits this message instead of sending a new one. */
   editing?: { messageId: string; text: string } | null;
@@ -22,7 +23,6 @@ export interface ChatComposerProps {
 export function ChatComposer({
   onSend,
   disabled = false,
-  isSending = false,
   editing = null,
   onSaveEdit,
   onCancelEdit,
@@ -52,9 +52,11 @@ export function ChatComposer({
     onCancelEdit?.();
   };
 
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   const handleSend = async () => {
     const trimmed = text.trim();
-    if (!trimmed || disabled || isSending) {
+    if (!trimmed || disabled || isSavingEdit) {
       return;
     }
 
@@ -63,17 +65,26 @@ export function ChatComposer({
         cancelEdit();
         return;
       }
-      const saved = await onSaveEdit(editing.messageId, trimmed);
-      if (saved) {
-        setText(draftBeforeEdit);
-        setDraftBeforeEdit('');
+      setIsSavingEdit(true);
+      try {
+        const saved = await onSaveEdit(editing.messageId, trimmed);
+        if (saved) {
+          setText(draftBeforeEdit);
+          setDraftBeforeEdit('');
+        }
+      } finally {
+        setIsSavingEdit(false);
       }
       return;
     }
 
+    // Clear right away, like any messaging app: the message now shows as a "Sending…" bubble
+    // (or "Not sent · Tap to retry"), so the box is free for the next message.
+    setText('');
     const sent = await onSend(trimmed);
-    if (sent) {
-      setText('');
+    if (!sent) {
+      // Not even queued (e.g. chat not ready yet): give the text back if the box is still empty.
+      setText((current) => (current ? current : trimmed));
     }
   };
 
@@ -123,7 +134,7 @@ export function ChatComposer({
         placeholderTextColor={colors.textMuted}
         style={styles.input}
         multiline
-        editable={!disabled && !isSending}
+        editable={!disabled && !isSavingEdit}
       />
       <Pressable
         accessibilityRole="button"
@@ -131,14 +142,14 @@ export function ChatComposer({
         onPress={() => {
           void handleSend();
         }}
-        disabled={disabled || isSending || !text.trim()}
+        disabled={disabled || isSavingEdit || !text.trim()}
         style={({ pressed }) => [
           styles.sendButton,
-          (disabled || isSending || !text.trim()) && styles.sendButtonDisabled,
+          (disabled || isSavingEdit || !text.trim()) && styles.sendButtonDisabled,
           pressed && styles.pressed,
         ]}
       >
-        {isSending ? (
+        {isSavingEdit ? (
           <ActivityIndicator size="small" color={colors.textInverse} />
         ) : (
           <AppText variant="bodyMedium" style={styles.sendLabel}>

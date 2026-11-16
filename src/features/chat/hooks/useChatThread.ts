@@ -31,6 +31,21 @@ interface UseChatThreadOptions {
   viewerRole?: string;
 }
 
+/**
+ * Swap a "Sending…" placeholder for the confirmed message IN PLACE, so quick successive sends
+ * keep their order. If the confirmed copy already arrived (live event), just drop the placeholder.
+ */
+function replaceOptimistic(
+  current: ChatMessage[],
+  optimisticId: string,
+  confirmed: ChatMessage,
+): ChatMessage[] {
+  if (current.some((item) => item._id === confirmed._id)) {
+    return current.filter((item) => item._id !== optimisticId);
+  }
+  return current.map((item) => (item._id === optimisticId ? confirmed : item));
+}
+
 /** After a send timeout: did the server save it anyway? (same text from me, sent just now) */
 /** After a timeout on a file message: was it saved with this uploaded file? */
 async function findSavedAttachmentCopy(
@@ -76,7 +91,7 @@ async function findSavedCopy(
 
 function createOptimisticMessage(chatId: string, senderId: string, text: string): ChatMessage {
   return {
-    _id: `local-${Date.now()}`,
+    _id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     chatId,
     sender: senderId,
     text,
@@ -342,7 +357,9 @@ export function useChatThread(options: UseChatThreadOptions) {
   const sendMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
-      if (!trimmed || !userId || !resolvedChat || isSending) {
+      // No "one at a time" lock: each message gets its own "Sending…" bubble, so you can keep
+      // typing and sending while earlier ones are still on their way.
+      if (!trimmed || !userId || !resolvedChat) {
         return false;
       }
 
@@ -369,12 +386,7 @@ export function useChatThread(options: UseChatThreadOptions) {
           if (response.timedOut && !isTempChatId(resolvedChat._id)) {
             const saved = await findSavedCopy(resolvedChat._id, userId, trimmed, optimistic.createdAt);
             if (saved) {
-              setMessages((current) => {
-                const withoutOptimistic = current.filter((item) => item._id !== optimistic._id);
-                return withoutOptimistic.some((item) => item._id === saved._id)
-                  ? withoutOptimistic
-                  : [...withoutOptimistic, saved];
-              });
+              setMessages((current) => replaceOptimistic(current, optimistic._id, saved));
               return true;
             }
           }
@@ -388,20 +400,9 @@ export function useChatThread(options: UseChatThreadOptions) {
         const realChatId = response.chatId ?? response.message.chatId ?? resolvedChat._id;
         joinChatRoom(realChatId);
 
-        setMessages((current) => {
-          const withoutOptimistic = current.filter((item) => item._id !== optimistic._id);
-          if (withoutOptimistic.some((item) => item._id === response.message!._id)) {
-            return withoutOptimistic;
-          }
-
-          return [
-            ...withoutOptimistic,
-            {
-              ...response.message!,
-              chatId: realChatId,
-            },
-          ];
-        });
+        setMessages((current) =>
+          replaceOptimistic(current, optimistic._id, { ...response.message!, chatId: realChatId }),
+        );
 
         return true;
       } catch (caught) {
@@ -424,7 +425,7 @@ export function useChatThread(options: UseChatThreadOptions) {
         setIsSending(false);
       }
     },
-    [isSending, resolvedChat, userId],
+    [resolvedChat, userId],
   );
 
   /** Upload a picked file and send it as its own message (like the website). */

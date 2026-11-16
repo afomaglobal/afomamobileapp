@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import * as Clipboard from 'expo-clipboard';
 import * as WebBrowser from 'expo-web-browser';
 import {
@@ -332,31 +332,43 @@ export function ChatThreadScreen({ route, navigation }: Props) {
     title,
   ]);
 
-  const scrollToLatestMessage = useCallback((animated: boolean) => {
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToEnd({ animated });
-    });
+  /*
+   * The list is INVERTED (standard for chats): it is anchored at the newest message, so new
+   * messages, the "is typing" bubble and the keyboard opening never need a manual scroll.
+   * The old version called scrollToEnd from three places that fought each other (the jumping),
+   * and stopped following after any drag, so "is typing" ended up off screen.
+   */
+  const newestFirst = useMemo(() => [...messages].reverse(), [messages]);
+
+  // "Jump to latest" button when reading older messages.
+  const [isAwayFromLatest, setIsAwayFromLatest] = useState(false);
+  const [hasUnseenNewer, setHasUnseenNewer] = useState(false);
+  const newestMessageId = messages[messages.length - 1]?._id;
+  const lastSeenNewestRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!newestMessageId) return;
+    if (isAwayFromLatest && lastSeenNewestRef.current && newestMessageId !== lastSeenNewestRef.current) {
+      setHasUnseenNewer(true);
+    }
+    if (!isAwayFromLatest) {
+      lastSeenNewestRef.current = newestMessageId;
+    }
+  }, [isAwayFromLatest, newestMessageId]);
+
+  const jumpToLatest = useCallback(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    setHasUnseenNewer(false);
   }, []);
 
-  // Scroll down only when a newer message appears — not when earlier ones are loaded on top.
-  const newestMessageId = messages[messages.length - 1]?._id;
-  const followLatestRef = useRef(true);
+  // Sending while scrolled up into history brings you down to your new message.
   useEffect(() => {
-    if (!hasLoadedOnce || !newestMessageId) {
-      return;
+    const newest = messages[messages.length - 1];
+    if (newest && newest.sender === chatUserId && newest.optimistic && isAwayFromLatest) {
+      jumpToLatest();
     }
-
-    followLatestRef.current = true;
-    scrollToLatestMessage(true);
-  }, [hasLoadedOnce, newestMessageId, scrollToLatestMessage]);
-
-  useEffect(() => {
-    if (keyboardHeight <= 0 || messages.length === 0) {
-      return;
-    }
-
-    scrollToLatestMessage(true);
-  }, [keyboardHeight, messages.length, scrollToLatestMessage]);
+    // Only when the newest message changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newestMessageId]);
 
   const handleComposerLayout = useCallback((event: LayoutChangeEvent) => {
     const nextHeight = Math.ceil(event.nativeEvent.layout.height);
@@ -373,7 +385,18 @@ export function ChatThreadScreen({ route, navigation }: Props) {
     <View style={styles.screen}>
       <FlatList
         ref={listRef}
-        data={messages}
+        data={newestFirst}
+        inverted
+        // Keeps what you're reading still when older pages load or new messages arrive while
+        // scrolled up; within 80 px of the newest message it follows new content.
+        maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 80 }}
+        onScroll={(event) => {
+          // Inverted: offset 0 is the newest message (visual bottom).
+          const away = event.nativeEvent.contentOffset.y > 160;
+          setIsAwayFromLatest((current) => (current === away ? current : away));
+          if (!away) setHasUnseenNewer(false);
+        }}
+        scrollEventThrottle={100}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
           <ChatMessageBubble
@@ -394,9 +417,10 @@ export function ChatThreadScreen({ route, navigation }: Props) {
         contentContainerStyle={[
           styles.messagesContent,
           messages.length === 0 ? styles.messagesEmpty : null,
-          { paddingBottom: spacing.md + listBottomInset },
+          // Inverted list: paddingTop sits at the visual bottom, above the composer/keyboard.
+          { paddingTop: spacing.md + listBottomInset, paddingBottom: spacing.md },
         ]}
-        ListFooterComponent={
+        ListHeaderComponent={
           otherIsTyping ? (
             <View style={styles.typingRow} accessibilityLiveRegion="polite">
               <View style={styles.typingBubble}>
@@ -407,7 +431,7 @@ export function ChatThreadScreen({ route, navigation }: Props) {
             </View>
           ) : null
         }
-        ListHeaderComponent={
+        ListFooterComponent={
           hasOlder ? (
             <Pressable
               accessibilityRole="button"
@@ -432,16 +456,23 @@ export function ChatThreadScreen({ route, navigation }: Props) {
             </View>
           ) : null
         }
-        onContentSizeChange={() => {
-          if (messages.length > 0 && followLatestRef.current) {
-            scrollToLatestMessage(false);
-          }
-        }}
-        onScrollBeginDrag={() => {
-          // The user is reading history; stop pinning to the bottom until a new message arrives.
-          followLatestRef.current = false;
-        }}
       />
+
+      {isAwayFromLatest ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={hasUnseenNewer ? 'New messages. Jump to latest' : 'Jump to latest message'}
+          onPress={jumpToLatest}
+          style={({ pressed }) => [
+            styles.jumpToLatest,
+            { bottom: listBottomInset + spacing.sm },
+            pressed && styles.loadOlderPressed,
+          ]}
+        >
+          {hasUnseenNewer ? <View style={styles.jumpDot} /> : null}
+          <Ionicons name="arrow-down" size={20} color={colors.textPrimary} />
+        </Pressable>
+      ) : null}
 
       <KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
         <View
@@ -712,6 +743,32 @@ const styles = StyleSheet.create({
   reactionEmoji: {
     fontSize: 24,
     lineHeight: 30,
+  },
+  jumpToLatest: {
+    position: 'absolute',
+    right: spacing.lg,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderStrong,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  jumpDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
   },
   blockedBanner: {
     paddingHorizontal: spacing.lg,
