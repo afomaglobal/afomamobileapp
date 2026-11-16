@@ -80,7 +80,7 @@ module.exports = () => {
     .replaceAll('{{BUYER_EMAIL}}', buyerEmail)
     .replaceAll('{{SELLER_EMAIL}}', sellerEmail)
     .replaceAll('{{CODE}}', code)
-    .replaceAll('{{VIDEO_URL}}', videoUrl || 'attached in App Review attachments')
+    .replaceAll('{{VIDEO_URL}}', videoUrl || 'Attached in App Store Connect (App Review Information → Attachment)')
     .replaceAll(
       '{{COUPON_NOTE}}',
       coupon
