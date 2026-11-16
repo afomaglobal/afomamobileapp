@@ -25,6 +25,8 @@ export interface UseChatSafetyActionsOptions {
   onBlocked?: () => void;
   /** Adds "Delete conversation" to the menu when provided. */
   onDeleteConversation?: () => Promise<void>;
+  /** Shown in confirmations, e.g. "Block Maria's Crafts?". */
+  otherName?: string;
 }
 
 type SheetState =
@@ -41,7 +43,8 @@ type SheetState =
  * froze the app before.
  */
 export function useChatSafetyActions(options: UseChatSafetyActionsOptions) {
-  const { reportedUserId, chatId, onBlocked, onDeleteConversation } = options;
+  const { reportedUserId, chatId, onBlocked, onDeleteConversation, otherName } = options;
+  const name = otherName?.trim() && otherName.trim() !== 'Messages' ? otherName.trim() : '';
   const [sheet, setSheet] = useState<SheetState>({ kind: 'closed' });
   const [isBusy, setIsBusy] = useState(false);
 
@@ -182,34 +185,26 @@ export function useChatSafetyActions(options: UseChatSafetyActionsOptions) {
       case 'block':
         return {
           ...base,
-          title: 'Block user',
-          message:
-            'You will no longer receive messages from this user. You can contact support if you need help.',
-          options: [
-            {
-              key: 'confirm',
-              label: 'Block user',
-              icon: 'ban-outline',
-              destructive: true,
-              onPress: () => void blockUser(),
-            },
-          ],
+          confirm: {
+            icon: 'ban-outline',
+            title: name ? `Block ${name}?` : 'Block this user?',
+            message:
+              'They won’t be able to message you and you won’t be able to message them. You can contact support if you need help.',
+            confirmLabel: 'Yes, block',
+            onConfirm: () => void blockUser(),
+          },
         };
       case 'deleteChat':
         return {
           ...base,
-          title: 'Delete conversation?',
-          message:
-            'This removes the conversation and all its messages for both you and the other person. This can’t be undone.',
-          options: [
-            {
-              key: 'confirm',
-              label: 'Delete conversation',
-              icon: 'trash-outline',
-              destructive: true,
-              onPress: () => void deleteConversation(),
-            },
-          ],
+          confirm: {
+            icon: 'trash-outline',
+            title: 'Delete this conversation?',
+            message: `All messages will be removed for you${name ? ` and ${name}` : ' and the other person'}. This can’t be undone.`,
+            confirmLabel: 'Yes, delete for both',
+            cancelLabel: 'Keep conversation',
+            onConfirm: () => void deleteConversation(),
+          },
         };
       case 'result':
         return { ...base, title: sheet.title, message: sheet.message, options: [], cancelLabel: 'Done' };
@@ -221,6 +216,7 @@ export function useChatSafetyActions(options: UseChatSafetyActionsOptions) {
     close,
     deleteConversation,
     isBusy,
+    name,
     onDeleteConversation,
     openSupportEmail,
     reportedUserId,

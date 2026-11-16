@@ -15,6 +15,20 @@ export interface ChatActionSheetOption {
   onPress: () => void;
 }
 
+/**
+ * A confirmation step. Rendered very differently from the menu (icon, explicit consequence,
+ * "Yes, …" button) so it never looks like the menu just reopened.
+ */
+export interface ChatActionSheetConfirm {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  cancelLabel?: string;
+  destructive?: boolean;
+  onConfirm: () => void;
+}
+
 export interface ChatActionSheetProps {
   visible: boolean;
   onClose: () => void;
@@ -26,6 +40,67 @@ export interface ChatActionSheetProps {
   busy?: boolean;
   /** Label of the closing button (defaults to "Cancel"). */
   cancelLabel?: string;
+  /** When set, the sheet shows this confirmation instead of the options list. */
+  confirm?: ChatActionSheetConfirm | null;
+}
+
+function ConfirmBody({
+  confirm,
+  busy,
+  onClose,
+}: {
+  confirm: ChatActionSheetConfirm;
+  busy: boolean;
+  onClose: () => void;
+}) {
+  const destructive = confirm.destructive ?? true;
+  return (
+    <View style={styles.confirm}>
+      <View style={[styles.confirmIcon, destructive && styles.confirmIconDanger]}>
+        <Ionicons
+          name={confirm.icon}
+          size={28}
+          color={destructive ? colors.error : colors.primary}
+        />
+      </View>
+      <AppText variant="h3" style={styles.confirmTitle}>
+        {confirm.title}
+      </AppText>
+      <AppText variant="bodySmall" color="textSecondary" style={styles.confirmMessage}>
+        {confirm.message}
+      </AppText>
+
+      <Pressable
+        accessibilityRole="button"
+        disabled={busy}
+        onPress={confirm.onConfirm}
+        style={({ pressed }) => [
+          styles.confirmButton,
+          destructive ? styles.confirmButtonDanger : styles.confirmButtonPrimary,
+          (pressed || busy) && styles.confirmButtonPressed,
+        ]}
+      >
+        {busy ? (
+          <ActivityIndicator color={colors.textInverse} />
+        ) : (
+          <AppText variant="bodyMedium" style={styles.confirmButtonLabel}>
+            {confirm.confirmLabel}
+          </AppText>
+        )}
+      </Pressable>
+
+      <Pressable
+        accessibilityRole="button"
+        disabled={busy}
+        onPress={onClose}
+        style={({ pressed }) => [styles.cancel, styles.confirmCancel, pressed && styles.optionPressed]}
+      >
+        <AppText variant="bodyMedium" color="textSecondary">
+          {confirm.cancelLabel ?? 'Cancel'}
+        </AppText>
+      </Pressable>
+    </View>
+  );
 }
 
 /**
@@ -42,7 +117,23 @@ export function ChatActionSheet({
   header,
   busy = false,
   cancelLabel = 'Cancel',
+  confirm = null,
 }: ChatActionSheetProps) {
+  if (confirm) {
+    return (
+      <BottomSheet
+        visible={visible}
+        onClose={busy ? () => undefined : onClose}
+        dismissOnBackdropPress={!busy}
+        scrollable={false}
+      >
+        <View style={styles.body}>
+          <ConfirmBody confirm={confirm} busy={busy} onClose={onClose} />
+        </View>
+      </BottomSheet>
+    );
+  }
+
   return (
     <BottomSheet
       visible={visible}
@@ -152,6 +243,59 @@ const styles = StyleSheet.create({
     borderRadius: radius.medium,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.borderStrong,
+  },
+  confirm: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingTop: spacing.sm,
+  },
+  confirmIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primarySoft,
+    marginBottom: spacing.xs,
+  },
+  confirmIconDanger: {
+    backgroundColor: colors.errorBg,
+  },
+  confirmTitle: {
+    color: colors.textPrimary,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  confirmMessage: {
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: spacing.sm,
+  },
+  confirmButton: {
+    alignSelf: 'stretch',
+    minHeight: 48,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  confirmButtonDanger: {
+    backgroundColor: colors.error,
+  },
+  confirmButtonPrimary: {
+    backgroundColor: colors.primary,
+  },
+  confirmButtonPressed: {
+    opacity: 0.85,
+  },
+  confirmButtonLabel: {
+    color: colors.textInverse,
+    fontWeight: '700',
+  },
+  confirmCancel: {
+    alignSelf: 'stretch',
+    borderRadius: radius.pill,
+    marginTop: 0,
   },
   busy: {
     flexDirection: 'row',

@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import * as Clipboard from 'expo-clipboard';
+import * as WebBrowser from 'expo-web-browser';
 import {
   FlatList,
+  Image,
+  Modal,
   Pressable,
   StyleSheet,
   View,
@@ -34,7 +37,8 @@ import { ChatActionSheet, type ChatActionSheetOption } from '../components/ChatA
 import { deleteChat } from '../api/chatApi';
 import { emitChatUnreadEvent } from '../utils/chatUnreadEvents';
 import { isTempChatId } from '../utils/chatDisplay';
-import type { ChatMessage } from '../types/chat';
+import type { ChatAttachment, ChatMessage } from '../types/chat';
+import { pickChatAttachment, type ChatAttachmentSource } from '../utils/pickChatAttachment';
 
 /** Same reactions as the website. */
 const REACTIONS = ['❤️', '😂', '😮', '😢', '😡', '👍'];
@@ -72,6 +76,8 @@ export function ChatThreadScreen({ route, navigation }: Props) {
     hasOlder,
     isLoadingOlder,
     loadOlderMessages,
+    retryMessage,
+    sendAttachment,
   } = useChatThread({
     userId: isAuthorized ? chatUserId : undefined,
     chatId,
@@ -113,12 +119,44 @@ export function ChatThreadScreen({ route, navigation }: Props) {
       navigation.goBack();
     },
     onDeleteConversation: realChatId ? handleDeleteConversation : undefined,
+    otherName: title,
   });
 
   // Long-press menu for a single message.
   const [actionMessage, setActionMessage] = useState<ChatMessage | null>(null);
   const [confirmDeleteMessage, setConfirmDeleteMessage] = useState(false);
   const [editing, setEditing] = useState<{ messageId: string; text: string } | null>(null);
+
+  // Attachments
+  const [attachSheetOpen, setAttachSheetOpen] = useState(false);
+  const [attachError, setAttachError] = useState<string | null>(null);
+  const [viewerImage, setViewerImage] = useState<ChatAttachment | null>(null);
+
+  const chooseAttachment = useCallback(
+    (source: ChatAttachmentSource) => {
+      setAttachSheetOpen(false);
+      setAttachError(null);
+      // Let the sheet finish closing before the system picker opens (iOS drops a picker
+      // presented while another modal is dismissing).
+      setTimeout(() => {
+        void pickChatAttachment(source).then(({ file, error: pickError }) => {
+          if (pickError) setAttachError(pickError);
+          if (file) void sendAttachment(file);
+        });
+      }, 400);
+    },
+    [sendAttachment],
+  );
+
+  const openAttachment = useCallback((attachment: ChatAttachment) => {
+    if (attachment.fileType?.startsWith('image/')) {
+      setViewerImage(attachment);
+      return;
+    }
+    void WebBrowser.openBrowserAsync(attachment.url).catch(() => {
+      setAttachError('Could not open this file.');
+    });
+  }, []);
 
   const closeMessageMenu = useCallback(() => {
     setActionMessage(null);
@@ -135,22 +173,6 @@ export function ChatThreadScreen({ route, navigation }: Props) {
   const messageMenuOptions: ChatActionSheetOption[] = (() => {
     if (!actionMessage) return [];
     const isOwn = actionMessage.sender === chatUserId;
-    if (confirmDeleteMessage) {
-      return [
-        {
-          key: 'confirm-delete',
-          label: 'Delete for everyone',
-          icon: 'trash-outline',
-          destructive: true,
-          onPress: () => {
-            const target = actionMessage;
-            closeMessageMenu();
-            void deleteMessage(target._id);
-          },
-        },
-      ];
-    }
-
     const options: ChatActionSheetOption[] = [];
     if (actionMessage.text?.trim()) {
       options.push({
@@ -325,6 +347,8 @@ export function ChatThreadScreen({ route, navigation }: Props) {
             message={item}
             isOwn={item.sender === chatUserId}
             currentUserId={chatUserId}
+            onRetry={messagingBlocked ? undefined : (message) => void retryMessage(message._id)}
+            onOpenAttachment={openAttachment}
             onLongPress={(message) => {
               setConfirmDeleteMessage(false);
               setActionMessage(message);
@@ -392,10 +416,10 @@ export function ChatThreadScreen({ route, navigation }: Props) {
             </View>
           ) : null}
 
-          {error ? (
+          {error || attachError ? (
             <View style={styles.errorBanner}>
               <AppText variant="caption" style={styles.errorText}>
-                {error}
+                {attachError ?? error}
               </AppText>
             </View>
           ) : null}
@@ -411,6 +435,7 @@ export function ChatThreadScreen({ route, navigation }: Props) {
               return saved;
             }}
             onCancelEdit={() => setEditing(null)}
+            onAttachPress={() => setAttachSheetOpen(true)}
           />
         </View>
       </KeyboardStickyView>
@@ -418,17 +443,96 @@ export function ChatThreadScreen({ route, navigation }: Props) {
       <ChatActionSheet
         visible={actionMessage !== null}
         onClose={closeMessageMenu}
-        title={confirmDeleteMessage ? 'Delete message?' : undefined}
-        message={
-          confirmDeleteMessage
-            ? 'It will show as "This message was deleted" for both of you.'
-            : undefined
-        }
         header={reactionsRow}
         options={messageMenuOptions}
+        confirm={
+          confirmDeleteMessage && actionMessage
+            ? {
+                icon: 'trash-outline',
+                title: 'Delete this message?',
+                message: 'It will show as “This message was deleted” for both of you.',
+                confirmLabel: 'Yes, delete',
+                onConfirm: () => {
+                  const target = actionMessage;
+                  closeMessageMenu();
+                  void deleteMessage(target._id);
+                },
+              }
+            : null
+        }
       />
 
       <ChatActionSheet {...safetySheetProps} />
+
+      <ChatActionSheet
+        visible={attachSheetOpen}
+        onClose={() => setAttachSheetOpen(false)}
+        title="Send an attachment"
+        message="Photos, videos, PDF or Office files, up to 25 MB."
+        options={[
+          {
+            key: 'library',
+            label: 'Photo or video',
+            icon: 'images-outline',
+            onPress: () => chooseAttachment('library'),
+          },
+          {
+            key: 'camera',
+            label: 'Take a photo',
+            icon: 'camera-outline',
+            onPress: () => chooseAttachment('camera'),
+          },
+          {
+            key: 'document',
+            label: 'Document',
+            icon: 'document-attach-outline',
+            onPress: () => chooseAttachment('document'),
+          },
+        ]}
+      />
+
+      <Modal
+        visible={viewerImage !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setViewerImage(null)}
+        statusBarTranslucent
+      >
+        <View style={styles.viewer}>
+          {viewerImage ? (
+            <Image
+              source={{ uri: viewerImage.url }}
+              style={styles.viewerImage}
+              resizeMode="contain"
+              accessibilityLabel={viewerImage.fileName}
+            />
+          ) : null}
+          <View style={[styles.viewerBar, { top: insets.top + spacing.sm }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open in browser"
+              onPress={() => {
+                const url = viewerImage?.url;
+                setViewerImage(null);
+                if (url) void WebBrowser.openBrowserAsync(url);
+              }}
+              hitSlop={10}
+              style={styles.viewerButton}
+            >
+              <Ionicons name="open-outline" size={22} color="#fff" />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close photo"
+              onPress={() => setViewerImage(null)}
+              hitSlop={10}
+              style={styles.viewerButton}
+            >
+              <Ionicons name="close" size={26} color="#fff" />
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -472,6 +576,30 @@ const styles = StyleSheet.create({
   headerAction: {
     padding: spacing.xs,
     marginLeft: spacing.xs,
+  },
+  viewer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewerImage: {
+    width: '100%',
+    height: '80%',
+  },
+  viewerBar: {
+    position: 'absolute',
+    right: spacing.md,
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  viewerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   loadOlder: {
     alignSelf: 'center',

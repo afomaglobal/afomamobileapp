@@ -13,6 +13,8 @@ export interface ChatComposerProps {
   editing?: { messageId: string; text: string } | null;
   onSaveEdit?: (messageId: string, text: string) => Promise<boolean>;
   onCancelEdit?: () => void;
+  /** Shows the attach button when provided. */
+  onAttachPress?: () => void;
 }
 
 export function ChatComposer({
@@ -22,6 +24,7 @@ export function ChatComposer({
   editing = null,
   onSaveEdit,
   onCancelEdit,
+  onAttachPress,
 }: ChatComposerProps) {
   const [text, setText] = useState('');
   const [draftBeforeEdit, setDraftBeforeEdit] = useState('');
@@ -90,6 +93,22 @@ export function ChatComposer({
         </View>
       ) : null}
     <View style={styles.container}>
+      {onAttachPress && !isEditing ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Attach a photo, video or file"
+          onPress={onAttachPress}
+          disabled={disabled}
+          hitSlop={6}
+          style={({ pressed }) => [
+            styles.attachButton,
+            disabled && styles.sendButtonDisabled,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Ionicons name="attach" size={24} color={colors.textSecondary} />
+        </Pressable>
+      ) : null}
       <TextInput
         ref={inputRef}
         value={text}
@@ -164,6 +183,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     color: colors.textPrimary,
     backgroundColor: colors.surface,
+  },
+  attachButton: {
+    width: 40,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sendButton: {
     minWidth: 72,

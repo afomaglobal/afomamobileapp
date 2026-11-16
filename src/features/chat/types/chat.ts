@@ -16,6 +16,16 @@ export interface ChatAttachment {
   size: number;
 }
 
+/** A file picked on this device, before (or while) it is uploaded. */
+export interface LocalChatFile {
+  uri: string;
+  name: string;
+  mimeType: string;
+  size?: number;
+  width?: number;
+  height?: number;
+}
+
 export interface ChatLastMessage {
   _id?: string;
   sender?: string;
@@ -52,6 +62,8 @@ export interface ChatMessage {
   edited?: boolean;
   optimistic?: boolean;
   failed?: boolean;
+  /** Set on a local message whose file is still uploading / failed to upload (for retry). */
+  localFile?: LocalChatFile;
 }
 
 export interface SendMessageAck {
@@ -59,4 +71,6 @@ export interface SendMessageAck {
   message?: ChatMessage;
   chatId?: string;
   error?: string;
+  /** No reply from the server in time; the message may or may not have been saved. */
+  timedOut?: boolean;
 }

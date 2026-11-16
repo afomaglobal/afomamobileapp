@@ -2,7 +2,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '../../../components/ui/AppText';
 import { colors, radius, spacing } from '../../../design-system';
-import type { ChatMessage } from '../types/chat';
+import type { ChatAttachment, ChatMessage } from '../types/chat';
+import { ChatAttachmentView } from './ChatAttachmentView';
 
 export interface ChatMessageBubbleProps {
   message: ChatMessage;
@@ -11,6 +12,10 @@ export interface ChatMessageBubbleProps {
   /** Tapping a reaction chip toggles that reaction for the current user. */
   onReactionPress?: (message: ChatMessage, type: string) => void;
   currentUserId?: string;
+  /** Tap on a failed own message resends it. */
+  onRetry?: (message: ChatMessage) => void;
+  /** Open a photo full-screen or a file/video in the browser. */
+  onOpenAttachment?: (attachment: ChatAttachment) => void;
 }
 
 function formatTime(value: string): string {
@@ -40,22 +45,34 @@ export function ChatMessageBubble({
   onLongPress,
   onReactionPress,
   currentUserId,
+  onRetry,
+  onOpenAttachment,
 }: ChatMessageBubbleProps) {
   const isDeleted = Boolean(message.isDeleted);
-  const label = isDeleted
-    ? 'This message was deleted'
-    : message.text?.trim() || (message.attachments?.length ? '[Attachment]' : '');
+  const attachments = isDeleted ? [] : message.attachments ?? [];
+  const label = isDeleted ? 'This message was deleted' : message.text?.trim() ?? '';
+  const isUploading = Boolean(message.optimistic && message.localFile);
   const reactions = isDeleted ? [] : groupReactions(message.reactions);
   const canLongPress = Boolean(onLongPress) && !isDeleted && !message.optimistic && !message.failed;
+  const canRetry = Boolean(onRetry) && Boolean(message.failed) && isOwn;
   const timeLabel = message.optimistic
-    ? 'Sending…'
-    : `${message.edited && !isDeleted ? 'Edited · ' : ''}${formatTime(message.createdAt)}`;
+    ? isUploading
+      ? 'Uploading…'
+      : 'Sending…'
+    : message.failed
+      ? onRetry
+        ? 'Not sent · Tap to retry'
+        : 'Not sent'
+      : `${message.edited && !isDeleted ? 'Edited · ' : ''}${formatTime(message.createdAt)}`;
 
   return (
     <View style={[styles.row, isOwn ? styles.rowOwn : styles.rowOther]}>
       <Pressable
-        disabled={!canLongPress}
-        onLongPress={() => onLongPress?.(message)}
+        disabled={!canLongPress && !canRetry}
+        onPress={canRetry ? () => onRetry?.(message) : undefined}
+        onLongPress={canLongPress ? () => onLongPress?.(message) : undefined}
+        accessibilityRole={canRetry ? 'button' : undefined}
+        accessibilityLabel={canRetry ? 'Message not sent. Tap to retry.' : undefined}
         delayLongPress={300}
         accessibilityHint={canLongPress ? 'Long press for message options' : undefined}
         style={({ pressed }) => [
@@ -66,16 +83,29 @@ export function ChatMessageBubble({
           pressed && canLongPress && styles.pressed,
         ]}
       >
-        <AppText
-          variant="body"
-          style={[
-            styles.text,
-            isOwn ? styles.textOwn : styles.textOther,
-            isDeleted && styles.textDeleted,
-          ]}
-        >
-          {label}
-        </AppText>
+        {attachments.map((attachment) => (
+          <ChatAttachmentView
+            key={attachment.url}
+            attachment={attachment}
+            isOwn={isOwn}
+            uploading={isUploading}
+            localSize={message.localFile}
+            onOpen={canRetry ? () => onRetry?.(message) : onOpenAttachment}
+            onLongPress={canLongPress ? () => onLongPress?.(message) : undefined}
+          />
+        ))}
+        {label ? (
+          <AppText
+            variant="body"
+            style={[
+              styles.text,
+              isOwn ? styles.textOwn : styles.textOther,
+              isDeleted && styles.textDeleted,
+            ]}
+          >
+            {label}
+          </AppText>
+        ) : null}
         <AppText variant="caption" style={[styles.time, isOwn ? styles.timeOwn : styles.timeOther, isDeleted && styles.textDeleted]}>
           {timeLabel}
         </AppText>

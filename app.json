@@ -48,8 +48,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow AFOMA to access your photos to add product images.",
-          "cameraPermission": "Allow AFOMA to use the camera to take product photos."
+          "photosPermission": "Allow AFOMA to access your photos to add product images and send photos in messages.",
+          "cameraPermission": "Allow AFOMA to use the camera to take product photos and photos for messages."
         }
       ],
       [

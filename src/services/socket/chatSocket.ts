@@ -1,6 +1,7 @@
 // Bundled build — Metro cannot resolve engine.io-client ESM transport subpaths in RN.
 import io from 'socket.io-client/dist/socket.io.js';
 import type { Socket } from 'socket.io-client';
+import { AppState, type AppStateStatus } from 'react-native';
 
 import { env } from '../../app/config/env';
 import { getSessionAccessTokenSync } from '../api/sessionAccessToken';
@@ -8,6 +9,38 @@ import type { ChatMessage, SendMessageAck } from '../../features/chat/types/chat
 
 let socket: Socket | null = null;
 let joinedUserId: string | null = null;
+/** Chat rooms to re-join after every reconnect (the server forgets them with the old socket). */
+const joinedChatIds = new Set<string>();
+
+/** How long to wait for the server to confirm a sent message before treating it as failed. */
+const SEND_ACK_TIMEOUT_MS = 15000;
+/** After this long in the background, the connection is rebuilt on return (it is often dead). */
+const STALE_AFTER_BACKGROUND_MS = 15000;
+
+let backgroundedAt: number | null = null;
+let connectHandler: (() => void) | null = null;
+let appStateSubscribed = false;
+
+function subscribeAppStateOnce(): void {
+  if (appStateSubscribed) return;
+  appStateSubscribed = true;
+  AppState.addEventListener('change', (state: AppStateStatus) => {
+    if (state === 'background' || state === 'inactive') {
+      backgroundedAt = backgroundedAt ?? Date.now();
+      return;
+    }
+    if (state === 'active') {
+      const wasAwayFor = backgroundedAt ? Date.now() - backgroundedAt : 0;
+      backgroundedAt = null;
+      if (socket && wasAwayFor > STALE_AFTER_BACKGROUND_MS) {
+        // The OS usually kills the connection in the background, but the client can still think
+        // it's connected for up to ~45s; anything sent then gets no reply. Rebuild it now.
+        socket.disconnect();
+        socket.connect();
+      }
+    }
+  });
+}
 
 function normalizeSocketUrl(raw: string | undefined): string | undefined {
   const trimmed = raw?.trim();
@@ -65,9 +98,15 @@ export function connectChatSocket(userId: string): Socket | null {
 
   const emitJoin = () => {
     activeSocket.emit('join', { userId });
+    // Re-join open chats so live edits/reactions/deletions keep arriving after a reconnect.
+    joinedChatIds.forEach((chatId) => activeSocket.emit('join_chat', { chatId }));
   };
 
-  activeSocket.off('connect');
+  subscribeAppStateOnce();
+
+  // Replace only our own handler; other listeners (e.g. an open thread re-syncing) stay.
+  if (connectHandler) activeSocket.off('connect', connectHandler);
+  connectHandler = emitJoin;
   activeSocket.on('connect', emitJoin);
 
   joinedUserId = userId;
@@ -117,6 +156,8 @@ export function disconnectChatSocket(): void {
   }
 
   joinedUserId = null;
+  joinedChatIds.clear();
+  connectHandler = null;
 }
 
 export function joinChatRoom(chatId: string): void {
@@ -124,6 +165,7 @@ export function joinChatRoom(chatId: string): void {
     return;
   }
 
+  joinedChatIds.add(chatId);
   socket?.emit('join_chat', { chatId });
 }
 
@@ -140,7 +182,14 @@ export async function sendChatMessage(payload: {
   }
 
   return new Promise((resolve) => {
+    // Without a timeout a message sent over a silently dead connection waited forever
+    // ("Sending…" stuck): socket.io drops pending replies when the connection finally drops.
+    const timeout = setTimeout(() => {
+      resolve({ status: 'error', error: 'Message not confirmed', timedOut: true });
+    }, SEND_ACK_TIMEOUT_MS);
+
     activeSocket.emit('send_message', payload, (response: SendMessageAck) => {
+      clearTimeout(timeout);
       resolve(response ?? { status: 'error', error: 'No response from server' });
     });
   });

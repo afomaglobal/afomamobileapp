@@ -57,7 +57,10 @@ export function getLastMessagePreview(lastMessage?: ChatLastMessage | null): str
   }
 
   if (lastMessage.attachments?.length) {
-    return '[Attachment]';
+    const type = lastMessage.attachments[0]?.fileType ?? '';
+    if (type.startsWith('image/')) return '📷 Photo';
+    if (type.startsWith('video/')) return '🎬 Video';
+    return `📄 ${lastMessage.attachments[0]?.fileName || 'File'}`;
   }
 
   return 'Start the conversation…';

@@ -124,30 +124,23 @@ export function ChatListScreen({ navigation }: Props) {
         visible={menuChat !== null}
         onClose={closeMenu}
         busy={isDeleting}
-        title={
-          confirmDelete
-            ? 'Delete conversation?'
-            : menuChat
-              ? getChatTitle(menuChat, chatUserId, role ?? user?.userRole)
-              : undefined
-        }
-        message={
-          deleteError ??
-          (confirmDelete
-            ? 'This removes the conversation and all its messages for both you and the other person. This can’t be undone.'
-            : undefined)
+        title={menuChat ? getChatTitle(menuChat, chatUserId, role ?? user?.userRole) : undefined}
+        message={deleteError ?? undefined}
+        confirm={
+          confirmDelete && menuChat && !deleteError
+            ? {
+                icon: 'trash-outline',
+                title: 'Delete this conversation?',
+                message: `All messages will be removed for you and ${getChatTitle(menuChat, chatUserId, role ?? user?.userRole)}. This can’t be undone.`,
+                confirmLabel: 'Yes, delete for both',
+                cancelLabel: 'Keep conversation',
+                onConfirm: () => void handleDeleteChat(),
+              }
+            : null
         }
         options={
           confirmDelete
-            ? [
-                {
-                  key: 'confirm',
-                  label: 'Delete conversation',
-                  icon: 'trash-outline',
-                  destructive: true,
-                  onPress: () => void handleDeleteChat(),
-                },
-              ]
+            ? []
             : [
                 {
                   key: 'open',

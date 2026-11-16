@@ -1,4 +1,7 @@
 import { apiDelete, apiGet } from '../../../services/api/request';
+import { apiClient } from '../../../services/api/client';
+import { getErrorMessage } from '../../../services/api/errors';
+import type { ChatAttachment, LocalChatFile } from '../types/chat';
 import type { ChatMessage, ChatSummary } from '../types/chat';
 
 interface UserChatsResponse {
@@ -39,4 +42,27 @@ export async function fetchChatMessages(
 
 export async function deleteChat(chatId: string): Promise<void> {
   await apiDelete(`/api/chats/${encodeURIComponent(chatId)}`, undefined, 'Could not delete chat');
+}
+
+/** Uploads one file for a chat message (same endpoint as the website). Requires sign-in. */
+export async function uploadChatAttachment(file: LocalChatFile): Promise<ChatAttachment> {
+  const formData = new FormData();
+  formData.append('file', {
+    uri: file.uri,
+    name: file.name,
+    type: file.mimeType,
+  } as unknown as Blob);
+
+  try {
+    const response = await apiClient.post<ChatAttachment>('/api/chats/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
+    });
+    if (!response.data?.url) {
+      throw new Error('Upload failed');
+    }
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, 'Could not upload the file'));
+  }
 }

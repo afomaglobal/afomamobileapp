@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { fetchChatMessages } from '../api/chatApi';
-import type { ChatMessage, ChatSummary } from '../types/chat';
+import { fetchChatMessages, uploadChatAttachment } from '../api/chatApi';
+import type { ChatAttachment, ChatMessage, ChatSummary, LocalChatFile } from '../types/chat';
 import {
   buildTempChat,
   findExistingChatWithReceiver,
@@ -29,6 +29,49 @@ interface UseChatThreadOptions {
   receiverId?: string;
   inboxChats?: ChatSummary[];
   viewerRole?: string;
+}
+
+/** After a send timeout: did the server save it anyway? (same text from me, sent just now) */
+/** After a timeout on a file message: was it saved with this uploaded file? */
+async function findSavedAttachmentCopy(
+  chatId: string,
+  userId: string,
+  attachmentUrl: string,
+): Promise<ChatMessage | null> {
+  try {
+    const response = await fetchChatMessages(chatId, { limit: 20 });
+    const match = (response.messages ?? []).find(
+      (message) =>
+        String(message.sender) === userId &&
+        (message.attachments ?? []).some((attachment) => attachment.url === attachmentUrl),
+    );
+    return match ? { ...match, chatId } : null;
+  } catch {
+    return null;
+  }
+}
+
+async function findSavedCopy(
+  chatId: string,
+  userId: string,
+  text: string,
+  sentAtIso: string,
+): Promise<ChatMessage | null> {
+  try {
+    const response = await fetchChatMessages(chatId, { limit: 20 });
+    const sentAt = new Date(sentAtIso).getTime() - 60_000;
+    const match = [...(response.messages ?? [])]
+      .reverse()
+      .find(
+        (message) =>
+          String(message.sender) === userId &&
+          message.text?.trim() === text &&
+          new Date(message.createdAt).getTime() >= sentAt,
+      );
+    return match ? { ...match, chatId } : null;
+  } catch {
+    return null;
+  }
 }
 
 function createOptimisticMessage(chatId: string, senderId: string, text: string): ChatMessage {
@@ -110,7 +153,14 @@ export function useChatThread(options: UseChatThreadOptions) {
         return;
       }
 
-      setMessages(Array.isArray(response.messages) ? response.messages : []);
+      const serverMessages = Array.isArray(response.messages) ? response.messages : [];
+      // Keep messages that are still sending or failed (they only exist on this device).
+      setMessages((current) => [
+        ...serverMessages,
+        ...current.filter(
+          (message) => (message.optimistic || message.failed) && message.chatId === activeChatId,
+        ),
+      ]);
       setHasOlder(Boolean(response.hasMore));
       setHasLoadedOnce(true);
     } catch (caught) {
@@ -256,7 +306,14 @@ export function useChatThread(options: UseChatThreadOptions) {
 
       setMessages((current) => {
         const withoutMatchingOptimistic = current.filter(
-          (item) => !(item.optimistic && item.text === message.text && item.sender === message.sender),
+          // File messages are matched by id when the server confirms (their text is empty).
+          (item) =>
+            !(
+              item.optimistic &&
+              !item.localFile &&
+              item.text === message.text &&
+              item.sender === message.sender
+            ),
         );
 
         if (withoutMatchingOptimistic.some((item) => item._id === message._id)) {
@@ -308,7 +365,24 @@ export function useChatThread(options: UseChatThreadOptions) {
         });
 
         if (response.status !== 'ok' || !response.message) {
-          throw new Error(response.error || 'Message failed to send');
+          // No reply in time: the server may still have saved it. Check before calling it failed.
+          if (response.timedOut && !isTempChatId(resolvedChat._id)) {
+            const saved = await findSavedCopy(resolvedChat._id, userId, trimmed, optimistic.createdAt);
+            if (saved) {
+              setMessages((current) => {
+                const withoutOptimistic = current.filter((item) => item._id !== optimistic._id);
+                return withoutOptimistic.some((item) => item._id === saved._id)
+                  ? withoutOptimistic
+                  : [...withoutOptimistic, saved];
+              });
+              return true;
+            }
+          }
+          throw new Error(
+            response.timedOut
+              ? 'Message not sent. Check your connection and tap it to retry.'
+              : response.error || 'Message failed to send',
+          );
         }
 
         const realChatId = response.chatId ?? response.message.chatId ?? resolvedChat._id;
@@ -343,13 +417,114 @@ export function useChatThread(options: UseChatThreadOptions) {
           ),
         );
         setError(getErrorMessage(caught, 'Message failed to send'));
-        return false;
+        // The failed bubble keeps the text and offers "Tap to retry", so clear the composer
+        // (returning false would leave a duplicate in the input).
+        return true;
       } finally {
         setIsSending(false);
       }
     },
     [isSending, resolvedChat, userId],
   );
+
+  /** Upload a picked file and send it as its own message (like the website). */
+  const sendAttachment = useCallback(
+    async (file: LocalChatFile) => {
+      if (!userId || !resolvedChat) return;
+
+      const participants = normalizeParticipantIds(resolvedChat.participants);
+      if (!participants.length && resolvedChat.receiverId) {
+        participants.push(userId, resolvedChat.receiverId);
+      }
+
+      const optimistic: ChatMessage = {
+        _id: `local-file-${Date.now()}`,
+        chatId: resolvedChat._id,
+        sender: userId,
+        text: '',
+        // Local preview until the upload finishes.
+        attachments: [{ url: file.uri, fileName: file.name, fileType: file.mimeType, size: file.size ?? 0 }],
+        createdAt: new Date().toISOString(),
+        readBy: [userId],
+        optimistic: true,
+        localFile: file,
+      };
+      setMessages((current) => [...current, optimistic]);
+      setError(null);
+
+      let uploaded: ChatAttachment | null = null;
+      try {
+        uploaded = await uploadChatAttachment(file);
+        const response = await sendChatMessage({
+          chatId: resolvedChat._id,
+          senderId: userId,
+          text: '',
+          participants,
+          attachments: [uploaded],
+        });
+
+        let delivered = response.status === 'ok' ? response.message ?? null : null;
+        if (!delivered && response.timedOut && !isTempChatId(resolvedChat._id)) {
+          delivered = await findSavedAttachmentCopy(resolvedChat._id, userId, uploaded.url);
+        }
+        if (!delivered) {
+          throw new Error(
+            response.timedOut
+              ? 'File not sent. Check your connection and tap it to retry.'
+              : response.error || 'File failed to send',
+          );
+        }
+
+        const realChatId = response.chatId ?? delivered.chatId ?? resolvedChat._id;
+        joinChatRoom(realChatId);
+        setMessages((current) => {
+          const withoutOptimistic = current.filter((item) => item._id !== optimistic._id);
+          return withoutOptimistic.some((item) => item._id === delivered!._id)
+            ? withoutOptimistic
+            : [...withoutOptimistic, { ...delivered!, chatId: realChatId }];
+        });
+      } catch (caught) {
+        setMessages((current) =>
+          current.map((item) =>
+            item._id === optimistic._id ? { ...item, optimistic: false, failed: true } : item,
+          ),
+        );
+        setError(getErrorMessage(caught, 'File failed to send'));
+      }
+    },
+    [resolvedChat, userId],
+  );
+
+  /** Resend a message that failed (tap on a "Not sent" bubble). */
+  const retryMessage = useCallback(
+    async (localId: string) => {
+      const failed = messages.find((message) => message._id === localId && message.failed);
+      if (!failed) return;
+      if (failed.localFile) {
+        setMessages((current) => current.filter((message) => message._id !== localId));
+        await sendAttachment(failed.localFile);
+        return;
+      }
+      if (!failed.text) return;
+      setMessages((current) => current.filter((message) => message._id !== localId));
+      await sendMessage(failed.text);
+    },
+    [messages, sendAttachment, sendMessage],
+  );
+
+  // After any (re)connect, re-fetch so messages missed while the connection was down appear.
+  useEffect(() => {
+    if (!activeChatId || isTempChatId(activeChatId)) return;
+    const socket = getChatSocket();
+    if (!socket) return;
+    const onConnect = () => {
+      void refreshMessages();
+    };
+    socket.on('connect', onConnect);
+    return () => {
+      socket.off('connect', onConnect);
+    };
+  }, [activeChatId, refreshMessages]);
 
   const title = useMemo(() => {
     if (!resolvedChat || !userId) {
@@ -461,6 +636,8 @@ export function useChatThread(options: UseChatThreadOptions) {
   );
 
   return {
+    sendAttachment,
+    retryMessage,
     hasOlder,
     isLoadingOlder,
     loadOlderMessages,
