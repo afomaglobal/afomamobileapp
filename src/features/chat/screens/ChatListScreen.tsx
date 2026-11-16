@@ -17,6 +17,7 @@ import { useRequireAuth } from '../../auth/hooks/useRequireAuth';
 import { authReturnTo } from '../../auth/utils/authNavigation';
 import { resolveChatUserId } from '../utils/resolveChatUserId';
 import { ChatListItem } from '../components/ChatListItem';
+import { useTypingChatIds } from '../utils/chatTyping';
 import { useChatInbox } from '../hooks/useChatInbox';
 import { deleteChat } from '../api/chatApi';
 import { ChatActionSheet } from '../components/ChatActionSheet';
@@ -33,6 +34,7 @@ export function ChatListScreen({ navigation }: Props) {
   const onMarketplaceScroll = useMarketplaceScrollHandler();
   const { user, role } = useAuth();
   const chatUserId = resolveChatUserId(user);
+  const typingChatIds = useTypingChatIds();
   const { isAuthorized } = useRequireAuth(CHAT_LIST_RETURN_TO);
   const { chats, hasLoadedOnce, isRefreshing, error, refresh } = useChatInbox(
     isAuthorized ? chatUserId : undefined,
@@ -93,6 +95,7 @@ export function ChatListScreen({ navigation }: Props) {
             chat={item}
             myId={chatUserId}
             myRole={role ?? user?.userRole}
+            isTyping={typingChatIds.has(item._id)}
             onPress={() =>
               navigation.navigate('ChatThread', {
                 chatId: item._id,
@@ -131,8 +134,8 @@ export function ChatListScreen({ navigation }: Props) {
             ? {
                 icon: 'trash-outline',
                 title: 'Delete this conversation?',
-                message: `All messages will be removed for you and ${getChatTitle(menuChat, chatUserId, role ?? user?.userRole)}. This can’t be undone.`,
-                confirmLabel: 'Yes, delete for both',
+                message: `It will be removed from your messages only. ${getChatTitle(menuChat, chatUserId, role ?? user?.userRole)} will still have it. If they message you again, it will come back with only the new messages.`,
+                confirmLabel: 'Yes, delete for me',
                 cancelLabel: 'Keep conversation',
                 onConfirm: () => void handleDeleteChat(),
               }

@@ -42,6 +42,10 @@ export interface ChatSummary {
   lastMessage?: ChatLastMessage | null;
   unreadCount?: number;
   unreadCounts?: Record<string, number>;
+  /** I blocked the other person (history stays visible, sending is off). */
+  blockedByMe?: boolean;
+  /** The other person blocked me. */
+  blockedMe?: boolean;
   createdAt?: string;
   updatedAt?: string;
   isTemp?: boolean;

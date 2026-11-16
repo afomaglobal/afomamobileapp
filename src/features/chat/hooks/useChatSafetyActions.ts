@@ -5,6 +5,7 @@ import { getErrorMessage } from '../../../services/api/errors';
 import {
   blockChatUser,
   submitChatReport,
+  unblockChatUser,
   type ChatReportReason,
 } from '../api/chatModerationApi';
 import type { ChatActionSheetOption, ChatActionSheetProps } from '../components/ChatActionSheet';
@@ -23,6 +24,9 @@ export interface UseChatSafetyActionsOptions {
   reportedUserId?: string;
   chatId?: string;
   onBlocked?: () => void;
+  /** I already blocked this user: the menu offers "Unblock user" instead of "Block user". */
+  isBlocked?: boolean;
+  onUnblocked?: () => void;
   /** Adds "Delete conversation" to the menu when provided. */
   onDeleteConversation?: () => Promise<void>;
   /** Shown in confirmations, e.g. "Block Maria's Crafts?". */
@@ -34,6 +38,7 @@ type SheetState =
   | { kind: 'menu' }
   | { kind: 'report'; messageId?: string }
   | { kind: 'block' }
+  | { kind: 'unblock' }
   | { kind: 'deleteChat' }
   | { kind: 'result'; title: string; message: string; after?: () => void };
 
@@ -43,7 +48,8 @@ type SheetState =
  * froze the app before.
  */
 export function useChatSafetyActions(options: UseChatSafetyActionsOptions) {
-  const { reportedUserId, chatId, onBlocked, onDeleteConversation, otherName } = options;
+  const { reportedUserId, chatId, onBlocked, isBlocked, onUnblocked, onDeleteConversation, otherName } =
+    options;
   const name = otherName?.trim() && otherName.trim() !== 'Messages' ? otherName.trim() : '';
   const [sheet, setSheet] = useState<SheetState>({ kind: 'closed' });
   const [isBusy, setIsBusy] = useState(false);
@@ -96,7 +102,7 @@ export function useChatSafetyActions(options: UseChatSafetyActionsOptions) {
       setSheet({
         kind: 'result',
         title: 'User blocked',
-        message: 'Messaging with this account is disabled.',
+        message: 'Neither of you can send new messages. Your conversation history is kept.',
         after: onBlocked,
       });
     } catch (error) {
@@ -109,6 +115,24 @@ export function useChatSafetyActions(options: UseChatSafetyActionsOptions) {
       setIsBusy(false);
     }
   }, [onBlocked, reportedUserId]);
+
+  const unblockUser = useCallback(async () => {
+    if (!reportedUserId) return;
+    setIsBusy(true);
+    try {
+      await unblockChatUser(reportedUserId);
+      setSheet({ kind: 'closed' });
+      onUnblocked?.();
+    } catch (error) {
+      setSheet({
+        kind: 'result',
+        title: 'Unblock failed',
+        message: getErrorMessage(error, 'Could not unblock user'),
+      });
+    } finally {
+      setIsBusy(false);
+    }
+  }, [onUnblocked, reportedUserId]);
 
   const deleteConversation = useCallback(async () => {
     if (!onDeleteConversation) return;
@@ -141,13 +165,20 @@ export function useChatSafetyActions(options: UseChatSafetyActionsOptions) {
               icon: 'flag-outline',
               onPress: () => setSheet({ kind: 'report' }),
             },
-            {
-              key: 'block',
-              label: 'Block user',
-              icon: 'ban-outline',
-              destructive: true,
-              onPress: () => setSheet({ kind: 'block' }),
-            },
+            isBlocked
+              ? {
+                  key: 'unblock',
+                  label: 'Unblock user',
+                  icon: 'checkmark-circle-outline',
+                  onPress: () => setSheet({ kind: 'unblock' }),
+                }
+              : {
+                  key: 'block',
+                  label: 'Block user',
+                  icon: 'ban-outline',
+                  destructive: true,
+                  onPress: () => setSheet({ kind: 'block' }),
+                },
           );
         }
         if (onDeleteConversation) {
@@ -189,9 +220,20 @@ export function useChatSafetyActions(options: UseChatSafetyActionsOptions) {
             icon: 'ban-outline',
             title: name ? `Block ${name}?` : 'Block this user?',
             message:
-              'They won’t be able to message you and you won’t be able to message them. You can contact support if you need help.',
+              'Neither of you will be able to send new messages. The conversation stays here, so you can still read it or report it. You can unblock them later.',
             confirmLabel: 'Yes, block',
             onConfirm: () => void blockUser(),
+          },
+        };
+      case 'unblock':
+        return {
+          ...base,
+          confirm: {
+            icon: 'checkmark-circle-outline',
+            title: name ? `Unblock ${name}?` : 'Unblock this user?',
+            message: 'You’ll both be able to send messages in this conversation again.',
+            confirmLabel: 'Yes, unblock',
+            onConfirm: () => void unblockUser(),
           },
         };
       case 'deleteChat':
@@ -200,8 +242,8 @@ export function useChatSafetyActions(options: UseChatSafetyActionsOptions) {
           confirm: {
             icon: 'trash-outline',
             title: 'Delete this conversation?',
-            message: `All messages will be removed for you${name ? ` and ${name}` : ' and the other person'}. This can’t be undone.`,
-            confirmLabel: 'Yes, delete for both',
+            message: `It will be removed from your messages only. ${name || 'The other person'} will still have it. If they message you again, it will come back with only the new messages.`,
+            confirmLabel: 'Yes, delete for me',
             cancelLabel: 'Keep conversation',
             onConfirm: () => void deleteConversation(),
           },
@@ -213,6 +255,8 @@ export function useChatSafetyActions(options: UseChatSafetyActionsOptions) {
     }
   }, [
     blockUser,
+    unblockUser,
+    isBlocked,
     close,
     deleteConversation,
     isBusy,

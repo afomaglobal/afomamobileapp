@@ -11,6 +11,8 @@ export interface ChatListItemProps {
   myRole?: string;
   onPress: () => void;
   onLongPress?: () => void;
+  /** The other person is typing right now: preview shows "typing…". */
+  isTyping?: boolean;
 }
 
 function formatTimestamp(value?: string): string {
@@ -26,9 +28,16 @@ function formatTimestamp(value?: string): string {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-export function ChatListItem({ chat, myId, myRole, onPress, onLongPress }: ChatListItemProps) {
+export function ChatListItem({
+  chat,
+  myId,
+  myRole,
+  onPress,
+  onLongPress,
+  isTyping = false,
+}: ChatListItemProps) {
   const title = getChatTitle(chat, myId, myRole);
-  const preview = getLastMessagePreview(chat.lastMessage);
+  const preview = isTyping ? 'typing…' : getLastMessagePreview(chat.lastMessage);
   const unread = chat.unreadCount ?? 0;
 
   return (
@@ -57,7 +66,11 @@ export function ChatListItem({ chat, myId, myRole, onPress, onLongPress }: ChatL
         </View>
 
         <View style={styles.previewRow}>
-          <AppText variant="caption" style={styles.preview} numberOfLines={1}>
+          <AppText
+            variant="caption"
+            style={[styles.preview, isTyping ? styles.previewTyping : null]}
+            numberOfLines={1}
+          >
             {preview}
           </AppText>
           {unread > 0 ? (
@@ -125,6 +138,10 @@ const styles = StyleSheet.create({
   preview: {
     flex: 1,
     color: colors.textMuted,
+  },
+  previewTyping: {
+    color: colors.primary,
+    fontStyle: 'italic',
   },
   badge: {
     minWidth: 22,

@@ -19,7 +19,10 @@
     "submit:test:ios": "eas submit --profile test --platform ios",
     "submit:test:android": "eas submit --profile test --platform android",
     "build:live": "eas build --profile production --platform all",
-    "submit:live": "eas submit --profile production --platform all"
+    "submit:live": "eas submit --profile production --platform all",
+    "update:preview": "eas update --channel preview --environment preview",
+    "update:test": "eas update --channel test --environment preview",
+    "update:live": "eas env:exec production \"npx expo export --platform all --clear\" && node scripts/scan-export-for-stg-hosts.mjs dist && eas update --channel production --environment production --skip-bundler"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

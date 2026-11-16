@@ -45,11 +45,25 @@ export async function unblockChatUser(blockedUserId: string): Promise<{ blockedU
   );
 }
 
-export async function fetchBlockedChatUserIds(): Promise<string[]> {
-  const response = await apiGet<{ blockedUserIds: string[] }>(
+export interface ChatBlockState {
+  /** Users I blocked. */
+  blockedUserIds: string[];
+  /** Users who blocked me (older servers don't send this). */
+  blockedByUserIds: string[];
+}
+
+export async function fetchChatBlockState(): Promise<ChatBlockState> {
+  const response = await apiGet<{ blockedUserIds?: string[]; blockedByUserIds?: string[] }>(
     '/api/chat-moderation/blocks',
     undefined,
     'Failed to load blocked users',
   );
-  return Array.isArray(response.blockedUserIds) ? response.blockedUserIds : [];
+  return {
+    blockedUserIds: Array.isArray(response.blockedUserIds) ? response.blockedUserIds : [],
+    blockedByUserIds: Array.isArray(response.blockedByUserIds) ? response.blockedByUserIds : [],
+  };
+}
+
+export async function fetchBlockedChatUserIds(): Promise<string[]> {
+  return (await fetchChatBlockState()).blockedUserIds;
 }

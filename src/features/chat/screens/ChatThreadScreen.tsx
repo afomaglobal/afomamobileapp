@@ -39,6 +39,7 @@ import { emitChatUnreadEvent } from '../utils/chatUnreadEvents';
 import { isTempChatId } from '../utils/chatDisplay';
 import type { ChatAttachment, ChatMessage } from '../types/chat';
 import { pickChatAttachment, type ChatAttachmentSource } from '../utils/pickChatAttachment';
+import { notifyStoppedTyping, notifyTyping, useTypingUserIds } from '../utils/chatTyping';
 
 /** Same reactions as the website. */
 const REACTIONS = ['❤️', '😂', '😮', '😢', '😡', '👍'];
@@ -93,10 +94,38 @@ export function ChatThreadScreen({ route, navigation }: Props) {
     ? getParticipantId(getOtherParticipant(chat?.participants, chatUserId)) || receiverId
     : receiverId;
 
-  const { isUserBlocked, refresh: refreshBlockedUsers } = useBlockedChatUsers(Boolean(chatUserId));
-  const messagingBlocked = isUserBlocked(otherUserId);
+  const {
+    isUserBlocked,
+    isBlockedByUser,
+    refresh: refreshBlockedUsers,
+  } = useBlockedChatUsers(Boolean(chatUserId));
+  // Blocking only stops new messages: the history stays on screen (needed as evidence for reports).
+  const blockedByMe = isUserBlocked(otherUserId);
+  const blockedMe = !blockedByMe && (isBlockedByUser(otherUserId) || Boolean(chat?.blockedMe));
+  const messagingBlocked = blockedByMe || blockedMe;
 
   const realChatId = chat?._id && !isTempChatId(chat._id) ? chat._id : undefined;
+
+  // "Jane is typing…"
+  const typingUserIds = useTypingUserIds(realChatId);
+  const otherIsTyping = typingUserIds.length > 0 && !messagingBlocked;
+  const typingName = title && title !== 'Messages' ? title.split(' ')[0] : '';
+  const handleComposerTextChange = useCallback(
+    (value: string) => {
+      if (messagingBlocked) return;
+      if (value.trim()) notifyTyping(realChatId);
+      else notifyStoppedTyping(realChatId);
+    },
+    [messagingBlocked, realChatId],
+  );
+  const sendAndStopTyping = useCallback(
+    (text: string) => {
+      notifyStoppedTyping(realChatId);
+      return sendMessage(text);
+    },
+    [realChatId, sendMessage],
+  );
+  useEffect(() => () => notifyStoppedTyping(realChatId), [realChatId]);
 
   const handleDeleteConversation = useCallback(async () => {
     if (!realChatId) return;
@@ -114,9 +143,13 @@ export function ChatThreadScreen({ route, navigation }: Props) {
   } = useChatSafetyActions({
     reportedUserId: otherUserId,
     chatId: chat?._id,
+    // Stay in the conversation after blocking: the history is kept, only the composer turns off.
     onBlocked: () => {
       void refreshBlockedUsers();
-      navigation.goBack();
+    },
+    isBlocked: blockedByMe,
+    onUnblocked: () => {
+      void refreshBlockedUsers();
     },
     onDeleteConversation: realChatId ? handleDeleteConversation : undefined,
     otherName: title,
@@ -363,6 +396,17 @@ export function ChatThreadScreen({ route, navigation }: Props) {
           messages.length === 0 ? styles.messagesEmpty : null,
           { paddingBottom: spacing.md + listBottomInset },
         ]}
+        ListFooterComponent={
+          otherIsTyping ? (
+            <View style={styles.typingRow} accessibilityLiveRegion="polite">
+              <View style={styles.typingBubble}>
+                <AppText variant="caption" style={styles.typingText}>
+                  {typingName ? `${typingName} is typing…` : 'Typing…'}
+                </AppText>
+              </View>
+            </View>
+          ) : null
+        }
         ListHeaderComponent={
           hasOlder ? (
             <Pressable
@@ -410,9 +454,22 @@ export function ChatThreadScreen({ route, navigation }: Props) {
           {messagingBlocked ? (
             <View style={styles.blockedBanner}>
               <AppText variant="caption" style={styles.blockedText}>
-                Messaging with this user is unavailable. You can report or block them from the menu
-                above, or email contact@afoma.io for help.
+                {blockedByMe
+                  ? 'You blocked this user, so neither of you can send new messages. The conversation is kept, and you can still report messages.'
+                  : 'You can’t reply to this conversation. The messages are kept, and you can still report them or email contact@afoma.io for help.'}
               </AppText>
+              {blockedByMe ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={openSafetyMenu}
+                  hitSlop={8}
+                  style={styles.blockedAction}
+                >
+                  <AppText variant="caption" style={styles.blockedActionText}>
+                    Unblock
+                  </AppText>
+                </Pressable>
+              ) : null}
             </View>
           ) : null}
 
@@ -425,7 +482,8 @@ export function ChatThreadScreen({ route, navigation }: Props) {
           ) : null}
 
           <ChatComposer
-            onSend={sendMessage}
+            onSend={sendAndStopTyping}
+            onTextChange={handleComposerTextChange}
             isSending={isSending}
             disabled={messagingBlocked}
             editing={editing}
@@ -549,6 +607,21 @@ const styles = StyleSheet.create({
   messagesEmpty: {
     justifyContent: 'center',
   },
+  typingRow: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xs,
+    alignItems: 'flex-start',
+  },
+  typingBubble: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceMuted,
+  },
+  typingText: {
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+  },
   emptyState: {
     paddingHorizontal: spacing.xl,
     alignItems: 'center',
@@ -647,5 +720,13 @@ const styles = StyleSheet.create({
   },
   blockedText: {
     color: colors.textSecondary,
+  },
+  blockedAction: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
+  },
+  blockedActionText: {
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });

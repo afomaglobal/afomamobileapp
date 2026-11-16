@@ -15,6 +15,8 @@ export interface ChatComposerProps {
   onCancelEdit?: () => void;
   /** Shows the attach button when provided. */
   onAttachPress?: () => void;
+  /** Called with the current text on every change (used for the typing indicator). */
+  onTextChange?: (text: string) => void;
 }
 
 export function ChatComposer({
@@ -25,6 +27,7 @@ export function ChatComposer({
   onSaveEdit,
   onCancelEdit,
   onAttachPress,
+  onTextChange,
 }: ChatComposerProps) {
   const [text, setText] = useState('');
   const [draftBeforeEdit, setDraftBeforeEdit] = useState('');
@@ -112,7 +115,10 @@ export function ChatComposer({
       <TextInput
         ref={inputRef}
         value={text}
-        onChangeText={setText}
+        onChangeText={(value) => {
+          setText(value);
+          onTextChange?.(value);
+        }}
         placeholder="Write a message…"
         placeholderTextColor={colors.textMuted}
         style={styles.input}
