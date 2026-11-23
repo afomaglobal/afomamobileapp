@@ -27,12 +27,17 @@ function buildCheckoutUserInfo(
 ): Record<string, unknown> {
   const shippingUserInfo = buildShippingUserInfo(address, identity);
 
-  return {
+  const userInfo: Record<string, unknown> = {
     ...identity,
     ...shippingUserInfo,
     userId: identity.userId ?? identity._id,
     ZipCode: address.zip.trim(),
   };
+  // The order's buyer details are saved with the order and shown to its sellers;
+  // the session token is sent in the Authorization header only.
+  delete userInfo.accessToken;
+  delete userInfo.accesstoken;
+  return userInfo;
 }
 
 function applySelectedShippingToLine(

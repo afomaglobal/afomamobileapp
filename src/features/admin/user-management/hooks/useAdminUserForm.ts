@@ -347,7 +347,7 @@ export function useAdminUserForm({
         userProfile: uploadedProfile ?? values.userProfile,
       });
 
-      const created = await createAdminUser(payload, creatorRole);
+      const created = await createAdminUser(payload);
       const createdId = created._id;
 
       if (createdId) {

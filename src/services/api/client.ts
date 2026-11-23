@@ -17,6 +17,16 @@ export {
   resolveRequestAccessToken,
 };
 
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    /**
+     * Send the signed-in user's token even though the path is also open to anonymous
+     * callers (for example an administrator creating a user through POST /users).
+     */
+    sendAuthOnPublicPath?: boolean;
+  }
+}
+
 function stripAuthorizationHeader(config: InternalAxiosRequestConfig): void {
   const headers = config.headers;
   if (!headers) {
@@ -47,7 +57,7 @@ apiClient.interceptors.request.use(async (config) => {
     url: config.url,
     baseURL: config.baseURL ?? apiClient.defaults.baseURL,
   });
-  if (isPublicApiRequest(method, path)) {
+  if (isPublicApiRequest(method, path) && !config.sendAuthOnPublicPath) {
     stripAuthorizationHeader(config);
     return config;
   }

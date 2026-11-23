@@ -60,21 +60,35 @@ export async function getAdminUserById(userId: string): Promise<AdminUserListIte
   );
 }
 
-/** POST /users — admin create (web parity; seller excluded at payload type level). */
-export async function createAdminUser(
-  payload: AdminUserCreatePayload,
-  creatorRole: string,
-): Promise<AdminUserListItem> {
-  return apiPost<AdminUserListItem>(
+interface AdminUserCreateResponse {
+  message?: string;
+  data?: { _id?: string; email?: string; role?: string; affiliateStatus?: string };
+}
+
+/**
+ * POST /users — admin create (web parity; seller excluded at payload type level).
+ * The API decides the creator's role from the signed-in administrator's token, so the
+ * token must be sent even though POST /users is also the public registration route.
+ * Creating an affiliate this way starts a pending affiliate application.
+ */
+export async function createAdminUser(payload: AdminUserCreatePayload): Promise<AdminUserListItem> {
+  const response = await apiPost<AdminUserCreateResponse>(
     '/users',
     payload,
-    {
-      headers: {
-        'creator-role': creatorRole,
-      },
-    },
+    { sendAuthOnPublicPath: true },
     'Failed to create user',
   );
+  const created = response?.data;
+  if (!created?._id) {
+    throw new Error(response?.message || 'Failed to create user');
+  }
+
+  return {
+    ...payload,
+    _id: created._id,
+    email: created.email ?? payload.email,
+    userRole: created.role ?? payload.userRole,
+  } as AdminUserListItem;
 }
 
 /** PUT /users/byAdmin/{userId} — primary admin edit path (not PUT /users/{id}). */

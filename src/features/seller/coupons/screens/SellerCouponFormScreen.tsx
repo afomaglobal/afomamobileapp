@@ -20,7 +20,7 @@ import { colors, spacing } from '../../../../design-system';
 import type { SellerStackParamList } from '../../../../app/navigation/sellerTypes';
 import { useAuth } from '../../../auth/hooks/useAuth';
 import { authReturnTo } from '../../../auth/utils/authNavigation';
-import { resolveAuthUserId } from '../../../auth/utils/resolveAuthUserId';
+import { resolveBackendUserDocumentId } from '../../../auth/utils/resolveBackendUserDocumentId';
 import { useRequireSeller } from '../../hooks/useRequireSeller';
 import { useSellerCouponForm } from '../hooks/useSellerCouponForm';
 import { COUPON_CODE_MAX_LEN } from '../../../../utils/couponCodeRules';
@@ -39,7 +39,8 @@ export function SellerCouponFormScreen({ navigation, route }: Props) {
   const formControls = useKeyboardAwareForm(scrollRef);
   const onFieldFocus = formControls.onFieldFocus;
   const { user } = useAuth();
-  const userId = resolveAuthUserId(user);
+  // Coupons belong to the User document; never fall back to the seller document id.
+  const userId = resolveBackendUserDocumentId(user);
   const { couponId, initialCoupon } = route.params ?? {};
   const returnTo = couponId
     ? authReturnTo.sellerCouponForm(couponId, initialCoupon)

@@ -67,7 +67,10 @@ export function useSellerOrderDetail(
         }
 
         const merged = applySellerOrderSessionPatch(response) ?? response;
-        setOrder(merged);
+        // Keep fields only the list record carries (payment status, currency) for the same order.
+        setOrder((previous) =>
+          previous && previous._id === merged._id ? { ...previous, ...merged } : merged,
+        );
         hasCachedOrderRef.current = true;
       } catch (err) {
         if (requestVersion !== requestVersionRef.current) {

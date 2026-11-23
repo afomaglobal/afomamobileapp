@@ -23,7 +23,7 @@ import { AdminProductCardActionsMenu } from '../../../admin/product-management/c
 import type { SellerStackParamList } from '../../../../app/navigation/sellerTypes';
 import { useAuth } from '../../../auth/hooks/useAuth';
 import { authReturnTo } from '../../../auth/utils/authNavigation';
-import { resolveAuthUserId } from '../../../auth/utils/resolveAuthUserId';
+import { resolveBackendUserDocumentId } from '../../../auth/utils/resolveBackendUserDocumentId';
 import { useRequireSeller } from '../../hooks/useRequireSeller';
 import { SellerCouponCard } from '../components/SellerCouponCard';
 import { SellerCouponStatusTabs } from '../components/SellerCouponStatusTabs';
@@ -42,7 +42,8 @@ const SKELETON_ITEMS = ['c1', 'c2', 'c3'] as const;
 export function SellerCouponsScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const userId = resolveAuthUserId(user);
+  // Coupons belong to the User document; never fall back to the seller document id.
+  const userId = resolveBackendUserDocumentId(user);
   const { isAuthorized } = useRequireSeller(RETURN_TO);
   const [notice, setNotice] = useState<string | null>(route.params?.notice ?? null);
 
