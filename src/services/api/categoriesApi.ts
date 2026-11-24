@@ -46,3 +46,25 @@ export async function getChildCategoriesByParent(parentId: string): Promise<Cate
     ),
   );
 }
+
+type LiveCategoriesResponse = { paths?: string[] };
+
+/**
+ * Slug paths of categories that have live products — "category", "category/sub",
+ * "category/sub/child" (GET /products/live-categories). Shoppers only see these.
+ * Returns null when the list can't be loaded (e.g. an older backend), so callers can
+ * fall back to not filtering instead of showing no categories at all.
+ */
+export async function getLiveCategoryPaths(): Promise<Set<string> | null> {
+  try {
+    const data = await apiGet<LiveCategoriesResponse>(
+      '/products/live-categories',
+      undefined,
+      'Failed to load categories',
+    );
+    if (!Array.isArray(data?.paths)) return null;
+    return new Set(data.paths.map((path) => String(path).toLowerCase()));
+  } catch {
+    return null;
+  }
+}

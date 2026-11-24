@@ -272,9 +272,9 @@ export function RegisterAccountScreen({ navigation, route }: Props) {
 
       {isSeller ? (
         <View style={styles.trialNote}>
-          <AppText variant="label">5-day free trial</AppText>
+          <AppText variant="label">365-day free trial</AppText>
           <AppText variant="bodySmall" color="textSecondary">
-            New seller accounts include a 5-day free trial with up to 5 active products.
+            New seller accounts include a 365-day free trial with up to 5 active products.
           </AppText>
         </View>
       ) : null}

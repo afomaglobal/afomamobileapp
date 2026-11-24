@@ -6,6 +6,7 @@ import {
 import {
   getCategories,
   getChildCategories,
+  getLiveCategoryPaths,
   getSubCategories,
 } from '../api/categoriesApi';
 import { getErrorMessage } from '../api/errors';
@@ -81,11 +82,51 @@ function buildSectionsForParent(parentId: string): SubCategoryBrowserSection[] {
     .filter((section): section is SubCategoryBrowserSection => section !== null);
 }
 
+const slugOf = (category: Category): string => String(category.slug ?? '').toLowerCase();
+
+/**
+ * Shoppers only see categories, subcategories and child categories that have live products
+ * (paths from GET /products/live-categories, e.g. "fashion/for-women/dresses").
+ * Seller listing forms load categories separately and still see every category.
+ */
+function keepOnlyLiveCategories(livePaths: Set<string>): void {
+  const parentSlugById = new Map<string, string>();
+  for (const parent of parentCategories) {
+    const id = getCategoryRouteId(parent);
+    if (id) parentSlugById.set(id, slugOf(parent));
+  }
+  parentCategories = parentCategories.filter((parent) => livePaths.has(slugOf(parent)));
+
+  const subPathById = new Map<string, string>();
+  for (const [parentId, subs] of subCategoriesByParentId) {
+    const parentSlug = parentSlugById.get(parentId);
+    const live = parentSlug
+      ? subs.filter((sub) => {
+          const path = `${parentSlug}/${slugOf(sub)}`;
+          if (!livePaths.has(path)) return false;
+          const subId = getCategoryRouteId(sub);
+          if (subId) subPathById.set(subId, path);
+          return true;
+        })
+      : [];
+    subCategoriesByParentId.set(parentId, live);
+  }
+
+  for (const [subId, children] of childCategoriesBySubCategoryId) {
+    const subPath = subPathById.get(subId);
+    childCategoriesBySubCategoryId.set(
+      subId,
+      subPath ? children.filter((child) => livePaths.has(`${subPath}/${slugOf(child)}`)) : [],
+    );
+  }
+}
+
 async function loadCategoryTree(): Promise<void> {
-  const [parentsRaw, subCategoriesRaw, childCategoriesRaw] = await Promise.all([
+  const [parentsRaw, subCategoriesRaw, childCategoriesRaw, livePaths] = await Promise.all([
     getCategories(),
     getSubCategories(),
     getChildCategories(),
+    getLiveCategoryPaths(),
   ]);
 
   parentCategories = getNavigableCategories(
@@ -122,6 +163,10 @@ async function loadCategoryTree(): Promise<void> {
     const existing = childCategoriesBySubCategoryId.get(subCategoryId) ?? [];
     existing.push(childCategory);
     childCategoriesBySubCategoryId.set(subCategoryId, existing);
+  }
+
+  if (livePaths) {
+    keepOnlyLiveCategories(livePaths);
   }
 
   for (const parent of parentCategories) {

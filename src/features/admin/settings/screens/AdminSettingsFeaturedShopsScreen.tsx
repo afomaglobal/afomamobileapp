@@ -214,7 +214,7 @@ export function AdminSettingsFeaturedShopsScreen(_props: Props) {
 
 
 
-  const canSelectMore = draftShops.length < ADMIN_FEATURED_SHOPS_MAX;
+  const canSelectMore = ADMIN_FEATURED_SHOPS_MAX == null || draftShops.length < ADMIN_FEATURED_SHOPS_MAX;
 
   const statusMeta = formatAdminFeaturedShopsMeta(draftShops.length);
 

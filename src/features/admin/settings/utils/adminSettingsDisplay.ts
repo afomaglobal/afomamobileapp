@@ -47,9 +47,12 @@ export function formatAdminFeaturedShopsMeta(count: number | null): AdminSetting
   }
 
   return {
-    label: `${count} of ${ADMIN_FEATURED_SHOPS_MAX} shops`,
+    label:
+      ADMIN_FEATURED_SHOPS_MAX != null
+        ? `${count} of ${ADMIN_FEATURED_SHOPS_MAX} shops`
+        : `${count} shop${count === 1 ? '' : 's'}`,
     icon: 'star-outline',
-    tone: count >= ADMIN_FEATURED_SHOPS_MAX ? 'success' : 'info',
+    tone: ADMIN_FEATURED_SHOPS_MAX == null || count >= ADMIN_FEATURED_SHOPS_MAX ? 'success' : 'info',
   };
 }
 

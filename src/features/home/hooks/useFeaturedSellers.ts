@@ -10,7 +10,8 @@ import {
 } from '../../../services/api/settingsApi';
 import type { Seller } from '../../../services/types/seller';
 
-const HOME_SELLER_LIMIT = 3;
+/** No limit: show every featured shop the admin selected (horizontal row). */
+const HOME_SELLER_LIMIT = Number.POSITIVE_INFINITY;
 
 export function useFeaturedSellers(limit = HOME_SELLER_LIMIT) {
   const [sellers, setSellers] = useState<Seller[]>([]);

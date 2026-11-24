@@ -100,7 +100,10 @@ export function AdminFeaturedShopPickerSheet({
             Select sellers
           </AppText>
           <AppText variant="caption" color="textSecondary">
-            Up to {ADMIN_FEATURED_SHOPS_MAX} approved active shops. Order is set on the main screen.
+            {ADMIN_FEATURED_SHOPS_MAX != null
+              ? `Up to ${ADMIN_FEATURED_SHOPS_MAX} approved active shops. `
+              : 'Approved active shops. '}
+            Order is set on the main screen.
           </AppText>
 
           <SearchBar

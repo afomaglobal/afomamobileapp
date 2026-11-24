@@ -4,7 +4,11 @@ import { usePricing } from '../../../app/providers/PricingProvider';
 import { getErrorMessage } from '../../../services/api/errors';
 import { getDiscountedProducts } from '../../../services/api/productsApi';
 import type { Product } from '../../../services/types/product';
-import { applyProductPricing, getProductRouteId } from '../../products/utils/productDisplay';
+import {
+  applyProductPricing,
+  getProductRouteId,
+  isProductOutOfStockForListing,
+} from '../../products/utils/productDisplay';
 import { normalizeFlatProductList } from '../../home/utils/homeProducts';
 
 const FETCH_LIMIT = 12;
@@ -50,6 +54,8 @@ export function useCartRecommendations(excludedProductIds: string[]) {
           excludedIdsKey ? excludedIdsKey.split('|').filter(Boolean) : [],
         );
         const filtered = priced.filter((product) => {
+          // The deals list can include out-of-stock items now; never suggest those in the cart.
+          if (isProductOutOfStockForListing(product)) return false;
           const id = getProductRouteId(product);
           return id ? !excludedIds.has(id) : true;
         });

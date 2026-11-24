@@ -1,3 +1,4 @@
+import { ApiError } from './errors';
 import type {
   GlobalSearchResponse,
   Product,
@@ -46,6 +47,28 @@ export async function getNewArrivalProducts(limit: number): Promise<Product[]> {
       'Failed to load new arrival products',
     ),
   );
+}
+
+/**
+ * Home "popular categories": only subcategories with live products
+ * (GET /products/home-categories). Falls back to /products/bestSelling/Product on an older
+ * backend that doesn't have the endpoint yet. Same row shape either way.
+ */
+export async function getHomeCategoryRows(limit = 8): Promise<Product[]> {
+  try {
+    return excludeHiddenProducts(
+      await apiGet<Product[]>(
+        `/products/home-categories?limit=${limit}`,
+        undefined,
+        'Failed to load categories',
+      ),
+    );
+  } catch (err) {
+    if (err instanceof ApiError && err.statusCode === 404) {
+      return getBestSellingProducts();
+    }
+    throw err;
+  }
 }
 
 export async function getBestSellingProducts(): Promise<Product[]> {
@@ -170,5 +193,64 @@ export async function globalProductSearch(name: string): Promise<GlobalSearchRes
     ...data,
     matchedProducts: excludeHiddenProducts(data?.matchedProducts),
     suggestedProducts: excludeHiddenProducts(data?.suggestedProducts),
+  };
+}
+
+export interface HomeCollections {
+  trending: Product[];
+  teamPicks: Product[];
+}
+
+/**
+ * Home "Trending Now" and "AFOMA Team Picks" (GET /products/home-collections): lists the admin
+ * picks in Settings (home-trending / home-team-picks), same as the website. Order is kept;
+ * products that are no longer live are already dropped by the server. An older backend without
+ * the endpoint (404) gives empty lists.
+ */
+export async function getHomeCollections(): Promise<HomeCollections> {
+  try {
+    const data = await apiGet<Partial<HomeCollections>>(
+      '/products/home-collections',
+      undefined,
+      'Failed to load home collections',
+    );
+    return {
+      trending: excludeHiddenProducts(Array.isArray(data?.trending) ? data.trending : []),
+      teamPicks: excludeHiddenProducts(Array.isArray(data?.teamPicks) ? data.teamPicks : []),
+    };
+  } catch (err) {
+    if (err instanceof ApiError && err.statusCode === 404) {
+      return { trending: [], teamPicks: [] };
+    }
+    throw err;
+  }
+}
+
+export type HomeDealsSlotType = 'discounted' | 'featured' | 'gifts' | 'none';
+
+export interface HomeDealsSlot {
+  type: HomeDealsSlotType;
+  title: string;
+  products: Product[];
+}
+
+/**
+ * Home "deals" slot (GET /products/home-deals): Most Discounted when there are enough deals,
+ * otherwise "Featured from our sellers" or "Gift picks"; type "none" with no products when there
+ * is nothing to show (the section is hidden).
+ */
+export async function getHomeDealsSlot(): Promise<HomeDealsSlot> {
+  const data = await apiGet<Partial<HomeDealsSlot> | Product[]>(
+    '/products/home-deals',
+    undefined,
+    'Failed to load home deals',
+  );
+  if (Array.isArray(data)) {
+    return { type: 'discounted', title: 'Most Discounted', products: excludeHiddenProducts(data) };
+  }
+  return {
+    type: data?.type ?? 'none',
+    title: data?.title ?? '',
+    products: excludeHiddenProducts(data?.products ?? []),
   };
 }

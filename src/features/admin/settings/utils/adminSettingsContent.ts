@@ -117,7 +117,7 @@ export function validateAdminCommissionRateValue(value: number): string | null {
 }
 
 export function validateAdminFeaturedShopsSelection(shops: AdminFeaturedShopSeller[]): string | null {
-  if (shops.length > ADMIN_FEATURED_SHOPS_MAX) {
+  if (ADMIN_FEATURED_SHOPS_MAX != null && shops.length > ADMIN_FEATURED_SHOPS_MAX) {
     return `You can select up to ${ADMIN_FEATURED_SHOPS_MAX} featured shops.`;
   }
 

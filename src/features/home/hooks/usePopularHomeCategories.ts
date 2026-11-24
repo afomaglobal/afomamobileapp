@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { getErrorMessage } from '../../../services/api/errors';
-import { getBestSellingProducts } from '../../../services/api/productsApi';
+import { getHomeCategoryRows } from '../../../services/api/productsApi';
 import {
   normalizePopularHomeCategories,
   type PopularHomeCategoryItem,
@@ -19,7 +19,8 @@ export function usePopularHomeCategories(limit = POPULAR_CATEGORY_LIMIT) {
     setError(null);
 
     try {
-      const response = await getBestSellingProducts();
+      // Ask for a few extra: categories hidden in the app (Art & Collectibles) are removed.
+      const response = await getHomeCategoryRows(limit + 4);
       setCategories(normalizePopularHomeCategories(response).slice(0, limit));
     } catch (err) {
       setCategories([]);

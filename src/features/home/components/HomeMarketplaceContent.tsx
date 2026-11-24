@@ -21,8 +21,11 @@ import { navigateToCatalogListing } from '../../services/utils/serviceDetailNavi
 import { HomeFeaturedSellersSection } from './HomeFeaturedSellersSection';
 import { HomeProductSection } from './HomeProductSection';
 import { HomePromoCarousel } from './HomePromoCarousel';
-import { useBestSellerProducts } from '../hooks/useBestSellerProducts';
-import { useDiscountedProducts } from '../hooks/useDiscountedProducts';
+import {
+  HOME_TEAM_PICKS_MAX,
+  HOME_TRENDING_MAX,
+  useHomeCollections,
+} from '../hooks/useHomeCollections';
 import { useFeaturedSellers } from '../hooks/useFeaturedSellers';
 import { useNewArrivalProducts } from '../hooks/useNewArrivalProducts';
 import { consumeMarketplaceHomeRefreshRequest } from '../state/marketplaceHomeRefresh';
@@ -46,30 +49,28 @@ export function HomeMarketplaceContent({ navigation }: HomeMarketplaceContentPro
     retry: retryNewArrivals,
   } = useNewArrivalProducts(8);
   const {
-    products: bestSellers,
-    isLoading: isBestSellersLoading,
-    error: bestSellersError,
-    retry: retryBestSellers,
-  } = useBestSellerProducts(4);
-  const {
-    products: discountedProducts,
-    isLoading: isDiscountedLoading,
-    error: discountedError,
-    retry: retryDiscounted,
-  } = useDiscountedProducts(4);
+    trending,
+    teamPicks,
+    isLoading: isCollectionsLoading,
+    error: collectionsError,
+    retry: retryCollections,
+  } = useHomeCollections();
+  // Trending shows while loading / on error (spinner-free, error panel with retry); Team Picks
+  // only when the admin has picked products.
+  const showTrending = trending.length > 0 || (!isCollectionsLoading && Boolean(collectionsError));
+  const showTeamPicks = teamPicks.length > 0;
   const {
     sellers: featuredSellers,
     isLoading: isFeaturedSellersLoading,
     error: featuredSellersError,
     retry: retryFeaturedSellers,
-  } = useFeaturedSellers(3);
+  } = useFeaturedSellers();
 
   const refreshHomeMarketplaceData = useCallback(() => {
     void retryFeaturedSellers();
     void retryNewArrivals();
-    void retryBestSellers();
-    void retryDiscounted();
-  }, [retryBestSellers, retryDiscounted, retryFeaturedSellers, retryNewArrivals]);
+    void retryCollections();
+  }, [retryCollections, retryFeaturedSellers, retryNewArrivals]);
 
   useFocusEffect(
     useCallback(() => {
@@ -93,16 +94,10 @@ export function HomeMarketplaceContent({ navigation }: HomeMarketplaceContentPro
         subtitle: 'Fresh products added this week',
         imageUrl: newArrivals[1] ? getProductImageUrl(newArrivals[1]) : undefined,
       },
-      {
-        id: 'discounted-promo',
-        title: 'Biggest savings right now',
-        subtitle: 'Browse discounted marketplace picks',
-        imageUrl: discountedProducts[0] ? getProductImageUrl(discountedProducts[0]) : undefined,
-      },
     ];
 
     return slides.filter((slide) => slide.title);
-  }, [discountedProducts, newArrivals]);
+  }, [newArrivals]);
 
   const handleProductPress = (product: Product) => {
     navigateToCatalogListing(navigation, product);
@@ -166,49 +161,36 @@ export function HomeMarketplaceContent({ navigation }: HomeMarketplaceContentPro
         />
       </View>
 
-      <View style={styles.section}>
-        <SectionHeader
-          title="Best Selling"
-          actionLabel="See All"
-          onActionPress={() =>
-            navigation.navigate('ProductListing', {
-              title: 'Best Selling',
-              listingSource: 'best',
-            })
-          }
-        />
-        <HomeProductSection
-          products={bestSellers}
-          isLoading={isBestSellersLoading}
-          error={bestSellersError}
-          onRetry={retryBestSellers}
-          onProductPress={handleProductPress}
-          layout="pair"
-          maxItems={4}
-        />
-      </View>
+      {showTrending ? (
+        <View style={styles.section}>
+          <SectionHeader title="Trending Now" />
+          <HomeProductSection
+            products={trending}
+            isLoading={isCollectionsLoading}
+            error={collectionsError}
+            onRetry={retryCollections}
+            onProductPress={handleProductPress}
+            layout="horizontal"
+            maxItems={HOME_TRENDING_MAX}
+          />
+        </View>
+      ) : null}
 
-      <View style={styles.section}>
-        <SectionHeader
-          title="Most Discounted"
-          actionLabel="See All"
-          onActionPress={() =>
-            navigation.navigate('ProductListing', {
-              title: 'Most Discounted',
-              listingSource: 'discounted',
-            })
-          }
-        />
-        <HomeProductSection
-          products={discountedProducts}
-          isLoading={isDiscountedLoading}
-          error={discountedError}
-          onRetry={retryDiscounted}
-          onProductPress={handleProductPress}
-          layout="pair"
-          maxItems={4}
-        />
-      </View>
+      {/* Admin's hand-picked list; hidden while empty. */}
+      {showTeamPicks ? (
+        <View style={styles.section}>
+          <SectionHeader title="AFOMA Team Picks" />
+          <HomeProductSection
+            products={teamPicks}
+            isLoading={false}
+            error={null}
+            onRetry={retryCollections}
+            onProductPress={handleProductPress}
+            layout="horizontal"
+            maxItems={HOME_TEAM_PICKS_MAX}
+          />
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
