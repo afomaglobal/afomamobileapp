@@ -274,8 +274,8 @@ export function RegisterAccountScreen({ navigation, route }: Props) {
         <View style={styles.trialNote}>
           <AppText variant="label">Seller onboarding</AppText>
           <AppText variant="bodySmall" color="textSecondary">
-            New seller accounts include an onboarding period with up to 5 active products. Plan billing is
-            managed on the AFOMA website, not in this app.
+            New seller accounts include an onboarding period with up to 5 active products. You can set up
+            your shop and list products from this app during onboarding.
           </AppText>
         </View>
       ) : null}

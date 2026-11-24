@@ -1,24 +1,40 @@
+import { Country } from 'country-state-city';
+
+import { getStorefrontBaseUrl } from '../../utils/storefrontUrl';
 import { getUserShippingSurcharge } from '../api/shippingApi';
 import {
   getStoredUserPricingInfo,
+  isGeoCoolingDown,
   setStoredUserPricingInfo,
+  startGeoCooldown,
 } from '../storage/userPricingStorage';
 import type { GeoLookupResult, UserPricingInfo } from './types';
 
-const IPWHOIS_URL = 'https://ipwhois.app/json/';
+const STOREFRONT_GEO_FAST_TIMEOUT_MS = 5000;
+const STOREFRONT_GEO_IP_TIMEOUT_MS = 38000;
 
 const COUNTRY_CURRENCY_FALLBACK: Record<string, string> = {
-  // pakistan: 'PKR',
+  pakistan: 'PKR',
   nigeria: 'NGN',
-  // 'united states': 'USD',
-  // 'united kingdom': 'GBP',
-  // canada: 'CAD',
-  // india: 'INR',
-  // australia: 'AUD',
+  'united states': 'USD',
+  'united kingdom': 'GBP',
+  canada: 'CAD',
+  india: 'INR',
+  australia: 'AUD',
 };
 
 const currencyJsonInflightByBase = new Map<string, Promise<Record<string, unknown> | null>>();
 const surchargeInflightByCountry = new Map<string, Promise<Record<string, number> | null>>();
+
+type StorefrontGeoResponse = {
+  ip?: string;
+  country?: string;
+  country_code?: string;
+  currency_code?: string;
+  source?: string;
+  detected?: boolean;
+  error?: string;
+};
 
 function normalizeCountryKey(country: string): string {
   return country.trim().toLowerCase();
@@ -33,6 +49,38 @@ function resolveCurrencyForGeo(country: string, currencyCode?: string): string {
   return COUNTRY_CURRENCY_FALLBACK[normalizeCountryKey(country)] ?? 'CAD';
 }
 
+/** Match web resolveCountryRecord — login country may be a name or ISO code. */
+function resolveLoginCountryName(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const countries = Country.getAllCountries();
+  const lower = trimmed.toLowerCase();
+
+  let match = countries.find((entry) => entry.name.toLowerCase() === lower);
+  if (match) {
+    return match.name;
+  }
+
+  if (trimmed.length === 2) {
+    match = countries.find((entry) => entry.isoCode.toLowerCase() === lower);
+    if (match) {
+      return match.name;
+    }
+  }
+
+  if (trimmed.length === 3) {
+    match = countries.find((entry) => entry.isoCode.toLowerCase() === lower.slice(0, 2));
+    if (match) {
+      return match.name;
+    }
+  }
+
+  return trimmed;
+}
+
 export function isValidStoredPricingInfo(stored: UserPricingInfo): boolean {
   const country = stored.country?.trim();
   const currency = stored.currency?.trim();
@@ -42,7 +90,6 @@ export function isValidStoredPricingInfo(stored: UserPricingInfo): boolean {
     return false;
   }
 
-  // Stale entries often keep CAD after geo moved abroad.
   if (currency === 'CAD' && normalizeCountryKey(country) !== 'canada') {
     return false;
   }
@@ -50,8 +97,118 @@ export function isValidStoredPricingInfo(stored: UserPricingInfo): boolean {
   return true;
 }
 
+async function fetchJsonWithTimeout(url: string, timeoutMs: number): Promise<unknown | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) {
+      return null;
+    }
+    return await response.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function parseStorefrontGeoPayload(data: unknown, fallbackIp?: string): GeoLookupResult | null {
+  if (!data || typeof data !== 'object') {
+    return null;
+  }
+
+  const record = data as StorefrontGeoResponse;
+  if (record.detected === false) {
+    return null;
+  }
+
+  const country = record.country?.trim();
+  const currencyCode = record.currency_code?.trim();
+  if (!country || !currencyCode) {
+    return null;
+  }
+
+  const ip = (record.ip ?? fallbackIp ?? '').trim();
+  if (!ip) {
+    return null;
+  }
+
+  return {
+    ip,
+    country,
+    currency: currencyCode.toUpperCase(),
+  };
+}
+
+async function fetchStorefrontGeo(visitorIp?: string): Promise<GeoLookupResult | null> {
+  const base = getStorefrontBaseUrl();
+  const query = visitorIp ? `?ip=${encodeURIComponent(visitorIp)}` : '';
+  const timeoutMs = visitorIp ? STOREFRONT_GEO_IP_TIMEOUT_MS : STOREFRONT_GEO_FAST_TIMEOUT_MS;
+  const data = await fetchJsonWithTimeout(`${base}/api/geo${query}`, timeoutMs);
+  return parseStorefrontGeoPayload(data, visitorIp);
+}
+
+async function fetchCurrencyForCountryCode(alpha2: string): Promise<string | null> {
+  const code = alpha2.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code)) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(
+      `https://restcountries.com/v3.1/alpha/${encodeURIComponent(code)}?fields=currencies`,
+    );
+    if (!response.ok) {
+      return null;
+    }
+    const data = (await response.json()) as Array<{ currencies?: Record<string, unknown> }>;
+    const currencies = data[0]?.currencies;
+    const currencyCode = currencies ? Object.keys(currencies)[0] : undefined;
+    return currencyCode?.toUpperCase() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Client fallback when storefront geo is unreachable — mirrors server geojs + country-data. */
+async function fetchGeojsLookup(visitorIp: string): Promise<GeoLookupResult | null> {
+  const data = (await fetchJsonWithTimeout(
+    `https://get.geojs.io/v1/ip/country/${encodeURIComponent(visitorIp)}.json`,
+    6000,
+  )) as { country?: string; ip?: string } | null;
+
+  const alpha2 = data?.country?.trim().toUpperCase();
+  if (!alpha2 || !/^[A-Z]{2}$/.test(alpha2)) {
+    return null;
+  }
+
+  const countries = Country.getAllCountries();
+  const record = countries.find((entry) => entry.isoCode.toUpperCase() === alpha2);
+  const countryName = record?.name;
+  if (!countryName) {
+    return null;
+  }
+
+  const currency =
+    (await fetchCurrencyForCountryCode(alpha2)) ??
+    COUNTRY_CURRENCY_FALLBACK[normalizeCountryKey(countryName)] ??
+    'CAD';
+
+  return {
+    ip: (data?.ip ?? visitorIp).trim(),
+    country: countryName,
+    currency,
+  };
+}
+
 export async function getClientIpInBrowser(): Promise<string | null> {
-  const services = ['https://api.ipify.org?format=json', 'https://api64.ipify.org?format=json'];
+  const services = [
+    'https://api.ipify.org?format=json',
+    'https://api64.ipify.org?format=json',
+    'https://api.ipify.org?format=json',
+  ];
 
   for (const url of services) {
     try {
@@ -69,34 +226,11 @@ export async function getClientIpInBrowser(): Promise<string | null> {
   return null;
 }
 
-function parseGeoPayload(data: Record<string, unknown>, fallbackIp?: string): GeoLookupResult | null {
-  const success = data.success;
-  if (success === false) {
-    return null;
-  }
-
-  const ip = String(data.ip ?? data.query ?? fallbackIp ?? '').trim();
-  const country = String(data.country ?? '').trim();
-  const currency = resolveCurrencyForGeo(country, String(data.currency_code ?? data.currency ?? ''));
-
-  if (!ip || !country) {
-    return null;
-  }
-
-  return { ip, country, currency };
-}
-
-/** Match web geo lookup — ipwhois detects the request IP directly. */
+/** Match web `fetchGeoInfo` — storefront /api/geo (edge + geojs + ipwhois server-side). */
 export async function fetchGeoInfo(): Promise<GeoLookupResult> {
-  try {
-    const response = await fetch(IPWHOIS_URL);
-    const data = (await response.json()) as Record<string, unknown>;
-    const parsed = parseGeoPayload(data);
-    if (parsed) {
-      return parsed;
-    }
-  } catch {
-    // Fall through to explicit IP lookup.
+  const edge = await fetchStorefrontGeo();
+  if (edge) {
+    return edge;
   }
 
   const visitorIp = await getClientIpInBrowser();
@@ -104,14 +238,17 @@ export async function fetchGeoInfo(): Promise<GeoLookupResult> {
     throw new Error('Could not determine visitor IP for geo pricing.');
   }
 
-  const response = await fetch(`${IPWHOIS_URL}${encodeURIComponent(visitorIp)}`);
-  const data = (await response.json()) as Record<string, unknown>;
-  const parsed = parseGeoPayload(data, visitorIp);
-  if (!parsed) {
-    throw new Error('Geo lookup failed.');
+  const fromStorefront = await fetchStorefrontGeo(visitorIp);
+  if (fromStorefront) {
+    return fromStorefront;
   }
 
-  return parsed;
+  const fromGeojs = await fetchGeojsLookup(visitorIp);
+  if (fromGeojs) {
+    return fromGeojs;
+  }
+
+  throw new Error('Geo lookup failed.');
 }
 
 export async function fetchCurrencyRate(base: string, target: string): Promise<number | null> {
@@ -174,16 +311,29 @@ export async function fetchSurchargeMap(country: string): Promise<Record<string,
   return request;
 }
 
-async function resolveCurrencyForCountry(countryName: string): Promise<string> {
+async function resolveCurrencyForCountry(countryInput: string): Promise<string> {
+  const countryName = resolveLoginCountryName(countryInput) ?? countryInput.trim();
   const fallback = COUNTRY_CURRENCY_FALLBACK[normalizeCountryKey(countryName)];
   if (fallback) {
     return fallback;
+  }
+
+  const countries = Country.getAllCountries();
+  const match = countries.find((entry) => entry.name.toLowerCase() === countryName.toLowerCase());
+  if (match) {
+    const fromCode = await fetchCurrencyForCountryCode(match.isoCode);
+    if (fromCode) {
+      return fromCode;
+    }
   }
 
   try {
     const response = await fetch(
       `https://restcountries.com/v3.1/name/${encodeURIComponent(countryName)}?fields=currencies`,
     );
+    if (!response.ok) {
+      return 'CAD';
+    }
     const data = (await response.json()) as Array<{ currencies?: Record<string, unknown> }>;
     const currencies = data[0]?.currencies;
     const code = currencies ? Object.keys(currencies)[0] : undefined;
@@ -213,14 +363,14 @@ export async function updateGuestPricingFromGeo(
   geoData: GeoLookupResult,
 ): Promise<{ userInfo: UserPricingInfo; changed: boolean }> {
   const prev = await getStoredUserPricingInfo();
-  const currency = resolveCurrencyForGeo(geoData.country, geoData.currency);
-  const currencyRate = (await fetchCurrencyRate('CAD', currency)) ?? 1;
+  const displayCurrency = resolveCurrencyForGeo(geoData.country, geoData.currency);
+  const rate = await fetchCurrencyRate('CAD', displayCurrency);
 
   const userInfo: UserPricingInfo = {
     ip: geoData.ip,
     country: geoData.country,
-    currency,
-    currencyRate,
+    currency: rate ? displayCurrency : 'CAD',
+    currencyRate: rate ?? 1,
     surCharge: (await fetchSurchargeMap(geoData.country)) ?? undefined,
   };
 
@@ -234,7 +384,7 @@ export async function updateLoginPricingFromCountry(
   currentIp?: string | null,
 ): Promise<{ userInfo: UserPricingInfo; changed: boolean }> {
   const prev = await getStoredUserPricingInfo();
-  const countryName = loginCountry.trim();
+  const countryName = resolveLoginCountryName(loginCountry) ?? loginCountry.trim();
   const currency = await resolveCurrencyForCountry(countryName);
   const currencyRate = (await fetchCurrencyRate('CAD', currency)) ?? 1;
 
@@ -254,10 +404,26 @@ export async function updateLoginPricingFromCountry(
 export async function refreshGuestGeoPricing(): Promise<{ userInfo: UserPricingInfo; changed: boolean }> {
   const stored = await getStoredUserPricingInfo();
 
+  if (await isGeoCoolingDown()) {
+    if (isValidStoredPricingInfo(stored)) {
+      return { userInfo: stored, changed: false };
+    }
+
+    return {
+      userInfo: {
+        currency: 'CAD',
+        currencyRate: 1,
+      },
+      changed: !isValidStoredPricingInfo(stored),
+    };
+  }
+
   let geo: GeoLookupResult;
   try {
     geo = await fetchGeoInfo();
   } catch {
+    await startGeoCooldown();
+
     if (isValidStoredPricingInfo(stored)) {
       return { userInfo: stored, changed: false };
     }

@@ -31,6 +31,11 @@ export interface SelectOptionsSheetProps {
   /** Show filter field (defaults on when there are more than 20 options). */
   searchable?: boolean;
   searchPlaceholder?: string;
+  /**
+   * `embedded` renders over the current screen without a second RN `Modal` (iOS cannot stack
+   * modals reliably — e.g. guest address full-screen modal + country picker).
+   */
+  presentation?: 'modal' | 'embedded';
 }
 
 export function SelectOptionsSheet({
@@ -45,6 +50,7 @@ export function SelectOptionsSheet({
   isOptionDisabled,
   searchable,
   searchPlaceholder = 'Search',
+  presentation = 'modal',
 }: SelectOptionsSheetProps) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
@@ -82,8 +88,8 @@ export function SelectOptionsSheet({
     return null;
   }
 
-  return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+  const sheet = (
+    <>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -135,19 +141,19 @@ export function SelectOptionsSheet({
 
               return (
                 <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ selected, disabled: optionDisabled }}
-                disabled={optionDisabled}
-                onPress={() => {
-                  onSelect(item.value);
-                  onClose();
-                }}
-                style={({ pressed }) => [
-                  styles.optionRow,
-                  selected && (useNavySelection ? styles.optionRowSelectedNavy : styles.optionRowSelected),
-                  optionDisabled && styles.optionRowDisabled,
-                  pressed && !optionDisabled && styles.pressed,
-                ]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected, disabled: optionDisabled }}
+                  disabled={optionDisabled}
+                  onPress={() => {
+                    onSelect(item.value);
+                    onClose();
+                  }}
+                  style={({ pressed }) => [
+                    styles.optionRow,
+                    selected && (useNavySelection ? styles.optionRowSelectedNavy : styles.optionRowSelected),
+                    optionDisabled && styles.optionRowDisabled,
+                    pressed && !optionDisabled && styles.pressed,
+                  ]}
                 >
                   <AppText
                     variant="body"
@@ -180,11 +186,26 @@ export function SelectOptionsSheet({
           />
         </View>
       </KeyboardAvoidingView>
+    </>
+  );
+
+  if (presentation === 'embedded') {
+    return <View style={styles.embeddedRoot}>{sheet}</View>;
+  }
+
+  return (
+    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
+      {sheet}
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  embeddedRoot: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
+    elevation: 100,
+  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.overlay,

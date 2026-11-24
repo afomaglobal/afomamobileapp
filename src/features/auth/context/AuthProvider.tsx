@@ -14,7 +14,11 @@ import {
   saveAuthenticatedSession,
   updateStoredProfile,
 } from '../../../services/auth/authSession';
-import { getStoredUserPricingInfo, clearStoredUserPricingInfo } from '../../../services/storage/userPricingStorage';
+import {
+  clearGeoCooldown,
+  clearStoredUserPricingInfo,
+  getStoredUserPricingInfo,
+} from '../../../services/storage/userPricingStorage';
 import { ApiError } from '../../../services/api/errors';
 
 const initialState: AuthState = {
@@ -151,6 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     primeAccessTokenInMemory(null);
     await clearAuthenticatedSession();
     await clearStoredUserPricingInfo();
+    await clearGeoCooldown();
     setState({
       user: null,
       role: null,

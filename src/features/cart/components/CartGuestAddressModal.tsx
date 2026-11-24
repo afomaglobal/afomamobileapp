@@ -96,7 +96,6 @@ export function CartGuestAddressModal({
   }
 
   return (
-    <>
       <Modal
         visible={visible}
         animationType="slide"
@@ -155,32 +154,35 @@ export function CartGuestAddressModal({
               />
             </View>
           </KeyboardStickyView>
+
+          <SelectOptionsSheet
+            presentation="embedded"
+            visible={activeRegionPicker === 'country'}
+            title="Country"
+            options={countryOptions}
+            value={countryStateValue.country}
+            onSelect={handleCountrySelect}
+            onClose={() => setActiveRegionPicker(null)}
+            searchable
+            searchPlaceholder="Search countries"
+          />
+
+          <SelectOptionsSheet
+            presentation="embedded"
+            visible={activeRegionPicker === 'state'}
+            title="State/Province"
+            options={stateOptions}
+            value={countryStateValue.state}
+            onSelect={handleStateSelect}
+            onClose={() => setActiveRegionPicker(null)}
+            emptyLabel={
+              countryStateValue.countryCode
+                ? 'No states available for this country'
+                : 'Select a country first'
+            }
+          />
         </View>
       </Modal>
-
-      <SelectOptionsSheet
-        visible={activeRegionPicker === 'country'}
-        title="Country"
-        options={countryOptions}
-        value={countryStateValue.country}
-        onSelect={handleCountrySelect}
-        onClose={() => setActiveRegionPicker(null)}
-      />
-
-      <SelectOptionsSheet
-        visible={activeRegionPicker === 'state'}
-        title="State/Province"
-        options={stateOptions}
-        value={countryStateValue.state}
-        onSelect={handleStateSelect}
-        onClose={() => setActiveRegionPicker(null)}
-        emptyLabel={
-          countryStateValue.countryCode
-            ? 'No states available for this country'
-            : 'Select a country first'
-        }
-      />
-    </>
   );
 }
 
