@@ -35,7 +35,9 @@ export function initSentry(): void {
     dsn,
     environment: process.env.EXPO_PUBLIC_APP_ENV ?? 'development',
     enabled: !__DEV__,
+    // Performance sampling only — not used for advertising or ATT “tracking”.
     tracesSampleRate: 0.2,
+    sendDefaultPii: false,
   });
 
   initialized = true;

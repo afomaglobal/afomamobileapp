@@ -243,7 +243,7 @@ export function formatSellerPlanStatusLabel(
   }
   if (membership.isOnTrial) {
     const days = membership.trialDaysLeft ?? 0;
-    return days > 0 ? `Free trial · ${days} day${days === 1 ? '' : 's'} left` : 'Free trial';
+    return days > 0 ? `Onboarding · ${days} day${days === 1 ? '' : 's'} left` : 'Onboarding';
   }
   if (membership.isSubscriptionActive) {
     return 'Active';

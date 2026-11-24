@@ -1,9 +1,12 @@
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
+import { PlatformPay, PlatformPayButton } from '@stripe/stripe-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppButton } from '../../../components/ui/AppButton';
 import { AppText } from '../../../components/ui/AppText';
 import { colors, radius, shadows, spacing } from '../../../design-system';
+import type { PaymentMethodId } from './PaymentMethodOption';
+import { ApplePayMark } from './ApplePayMark';
 import { useMarketplaceChromeOptional } from '../../../app/navigation/marketplaceChrome';
 import { getMarketplaceFooterContentInset } from '../../../app/navigation/marketplaceChrome/marketplaceFooterLayout';
 import { formatProductPrice } from '../../products/utils/productDisplay';
@@ -12,6 +15,7 @@ interface PaymentMethodPickerFooterProps {
   currency: string;
   total?: number | null;
   shippingPending?: boolean;
+  selectedMethodId?: PaymentMethodId | null;
   selectedMethodLabel?: string | null;
   payLabel?: string;
   onContinue: () => void;
@@ -25,6 +29,7 @@ export function PaymentMethodPickerFooter({
   currency,
   total = null,
   shippingPending = false,
+  selectedMethodId,
   selectedMethodLabel,
   payLabel,
   onContinue,
@@ -49,9 +54,20 @@ export function PaymentMethodPickerFooter({
         ? `Pay ${formatProductPrice(total, currency)} now`
         : 'Pay now');
 
+  const showApplePayCheckoutButton =
+    Platform.OS === 'ios' && selectedMethodId === 'applepay' && !continueLoading;
+  const showApplePayMarkInBar = showApplePayCheckoutButton;
+
   return (
     <View style={[styles.footer, { paddingBottom: bottomPadding }]}>
-      {selectedMethodLabel ? (
+      {showApplePayMarkInBar ? (
+        <View style={styles.methodBar}>
+          <AppText variant="body" color="textSecondary">
+            Paying with
+          </AppText>
+          <ApplePayMark height={18} />
+        </View>
+      ) : selectedMethodLabel ? (
         <View style={styles.methodBar}>
           <AppText variant="body" color="textSecondary">
             Paying with
@@ -74,16 +90,28 @@ export function PaymentMethodPickerFooter({
         </AppText>
       </View>
 
-      <AppButton
-        label={buttonLabel}
-        onPress={onContinue}
-        disabled={continueDisabled}
-        loading={continueLoading}
-        fullWidth
-        size="lg"
-        shape="pill"
-        variant="primary"
-      />
+      {showApplePayCheckoutButton ? (
+        <PlatformPayButton
+          type={PlatformPay.ButtonType.Buy}
+          appearance={PlatformPay.ButtonStyle.Black}
+          borderRadius={28}
+          onPress={onContinue}
+          disabled={continueDisabled}
+          style={styles.applePayButton}
+          accessibilityLabel={buttonLabel}
+        />
+      ) : (
+        <AppButton
+          label={buttonLabel}
+          onPress={onContinue}
+          disabled={continueDisabled}
+          loading={continueLoading}
+          fullWidth
+          size="lg"
+          shape="pill"
+          variant="primary"
+        />
+      )}
     </View>
   );
 }
@@ -123,5 +151,9 @@ const styles = StyleSheet.create({
   },
   totalPending: {
     color: colors.textMuted,
+  },
+  applePayButton: {
+    width: '100%',
+    height: 52,
   },
 });

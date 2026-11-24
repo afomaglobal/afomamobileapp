@@ -3,7 +3,7 @@ import type { UpdateUserProfileRequest, UserProfileResponse } from '../../../ser
 import { resolveUserProfileImageUrl } from '../../../utils/resolveUserProfileImageUrl';
 import { resolveAddressRegionCodes } from '../../checkout/utils/resolveAddressRegionCodes';
 import { resolveCountryStateSelection } from '../../../utils/regionOptions';
-import { isValidEmail } from '../../auth/utils/validation';
+import { isValidEmail, validateOptionalPhone } from '../../auth/utils/validation';
 
 export type AccountDetailsFormField =
   | 'firstName'
@@ -174,8 +174,9 @@ export function validateAccountDetailsForm(
     errors.email = 'Invalid email address';
   }
 
-  if (!values.phone.trim()) {
-    errors.phone = 'Required';
+  const phoneError = validateOptionalPhone(values.phone);
+  if (phoneError) {
+    errors.phone = phoneError;
   }
 
   if (!values.country.trim()) {

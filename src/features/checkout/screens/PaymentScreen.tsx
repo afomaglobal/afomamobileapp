@@ -266,13 +266,13 @@ function PaymentScreenBody({ route }: Props) {
         methods.push({
           id: 'applepay',
           label: 'Apple Pay',
+          useApplePayMark: true,
           subtitle: applePayEnabled
             ? 'Fast checkout on iPhone'
             : applePayBuildReady
               ? 'Apple Pay is not available on this device'
               : 'Requires a development build',
           disabled: !applePayEnabled,
-          icon: 'logo-apple',
         });
       }
 
@@ -704,6 +704,7 @@ function PaymentScreenBody({ route }: Props) {
           currency={currency}
           total={totals.displayTotal}
           shippingPending={shippingPending}
+          selectedMethodId={selectedPaymentMethodOption?.id ?? null}
           selectedMethodLabel={selectedPaymentMethodOption?.label ?? null}
           payLabel={footerPayLabel}
           onContinue={() => void handleConfirmPayment()}

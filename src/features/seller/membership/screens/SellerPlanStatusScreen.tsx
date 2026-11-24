@@ -35,7 +35,7 @@ function formatDate(value?: string | null, withTime = false): string {
 }
 
 /**
- * Read-only "Subscription & Plan" screen for the mobile apps.
+ * Read-only "Seller plan status" screen for the mobile apps.
  *
  * Plans are chosen and paid for on the AFOMA website only. To comply with App Store
  * guideline 3.1.1 and Google Play's payments policy, this screen shows the seller's current
@@ -117,7 +117,7 @@ export function SellerPlanStatusScreen({ route }: Props) {
             </View>
 
             <AppText variant="h2" style={styles.planName}>
-              {membership.isOnTrial ? 'Free trial' : membership.tierName}
+              {membership.isOnTrial ? 'Seller onboarding' : membership.tierName}
             </AppText>
             <AppText variant="bodySmall" color="textSecondary">
               {formatCommissionPercent(membership.commissionPercent)} commission rate
@@ -133,14 +133,22 @@ export function SellerPlanStatusScreen({ route }: Props) {
               <View style={styles.statDivider} />
               <View style={styles.stat}>
                 <AppText variant="caption" color="textSecondary">
-                  {membership.isOnTrial ? 'Trial ends' : 'Renews'}
+                  {membership.isOnTrial
+                    ? 'Onboarding ends'
+                    : membership.sellingPaused
+                      ? 'Onboarding ended'
+                      : membership.isSubscriptionActive
+                        ? 'Next billing'
+                        : 'Status'}
                 </AppText>
                 <AppText variant="label">
                   {membership.isOnTrial
                     ? formatDate(membership.trialEndsAt, true)
-                    : membership.isSubscriptionActive
-                      ? formatDate(membership.nextBillingDate)
-                      : '—'}
+                    : membership.sellingPaused && membership.trialEndsAt
+                      ? formatDate(membership.trialEndsAt, true)
+                      : membership.isSubscriptionActive
+                        ? formatDate(membership.nextBillingDate)
+                        : '—'}
                 </AppText>
               </View>
             </View>

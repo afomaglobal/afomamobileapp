@@ -165,7 +165,7 @@ export function AccountDetailsScreen(_props: Props) {
             />
             <AppInput
               tone="surface"
-              label="Contact No. *"
+              label="Contact number (optional)"
               value={values.phone}
               onChangeText={(text) => updateField('phone', text)}
               onFocus={onFieldFocus}

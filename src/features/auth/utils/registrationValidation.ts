@@ -4,7 +4,7 @@ import type {
   RegistrationFormErrors,
   RegistrationFormValues,
 } from '../types/registration';
-import { isValidEmail } from './validation';
+import { isValidEmail, validateOptionalPhone } from './validation';
 
 const NAME_PATTERN = /^[a-zA-Z\s]+$/;
 
@@ -36,8 +36,9 @@ export function validateRegistrationForm(
     errors.email = 'Invalid email address';
   }
 
-  if (!values.phone.trim()) {
-    errors.phone = 'Required';
+  const phoneError = validateOptionalPhone(values.phone);
+  if (phoneError) {
+    errors.phone = phoneError;
   }
 
   if (!values.streetAddress.trim()) {

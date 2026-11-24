@@ -16,7 +16,7 @@ export interface RegisterBuyerPayload {
   state: string;
   city: string;
   ZipCode: string;
-  phone: string;
+  phone?: string;
   streetAddress: string;
   userRole: 'customer';
   countryCode: string;
@@ -30,7 +30,7 @@ export interface RegisterSellerPayload {
   firstName: string;
   lastName: string;
   email: string;
-  phone: string;
+  phone?: string;
   country: string;
   state: string;
   city: string;

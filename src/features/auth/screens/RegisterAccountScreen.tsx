@@ -87,7 +87,7 @@ export function RegisterAccountScreen({ navigation, route }: Props) {
           firstName: values.firstName.trim(),
           lastName: values.lastName.trim(),
           email: values.email.trim(),
-          phone: values.phone.trim(),
+          phone: values.phone.trim() || undefined,
           country: values.country,
           state: values.state,
           city: values.city.trim(),
@@ -116,7 +116,7 @@ export function RegisterAccountScreen({ navigation, route }: Props) {
           state: values.state,
           city: values.city.trim(),
           ZipCode: values.zipCode.trim(),
-          phone: values.phone.trim(),
+          phone: values.phone.trim() || undefined,
           streetAddress: values.streetAddress.trim(),
           userRole: 'customer',
           countryCode: values.countryCode,
@@ -199,7 +199,7 @@ export function RegisterAccountScreen({ navigation, route }: Props) {
         editable={!loading}
       />
       <AppInput
-        label="Phone *"
+        label="Phone (optional)"
         value={values.phone}
         onChangeText={(next) => handleChange('phone', next)}
         error={fieldErrors.phone}
@@ -272,9 +272,10 @@ export function RegisterAccountScreen({ navigation, route }: Props) {
 
       {isSeller ? (
         <View style={styles.trialNote}>
-          <AppText variant="label">365-day free trial</AppText>
+          <AppText variant="label">Seller onboarding</AppText>
           <AppText variant="bodySmall" color="textSecondary">
-            New seller accounts include a 365-day free trial with up to 5 active products.
+            New seller accounts include an onboarding period with up to 5 active products. Plan billing is
+            managed on the AFOMA website, not in this app.
           </AppText>
         </View>
       ) : null}

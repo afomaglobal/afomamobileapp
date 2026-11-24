@@ -250,7 +250,7 @@ export function SellerNavigator() {
       <Stack.Screen
         name="SellerMembership"
         component={SellerPlanStatusScreen}
-        options={{ title: 'Subscription & Plan' }}
+        options={{ title: 'Seller plan status' }}
       />
       <Stack.Screen
         name="SellerCreatorWallet"

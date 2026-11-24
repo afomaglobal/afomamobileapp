@@ -11,6 +11,7 @@
  * Before push (PowerShell):
  *   $env:APPLE_REVIEW_DEMO_EMAIL="buyerappreview@afoma.io"
  *   $env:APPLE_REVIEW_SELLER_EMAIL="sellerappreview@afoma.io"
+ *   $env:APPLE_REVIEW_SELLER_EXPIRED_EMAIL="sellerappreview-expired@afoma.io"
  *   $env:APPLE_REVIEW_DEMO_CODE="123456"            # same as REVIEW_DEMO_OTP on the server
  *   $env:APPLE_REVIEW_VIDEO_URL="https://..."       # screen recording link (optional)
  *   $env:APPLE_REVIEW_COUPON="APPREVIEW100"         # 100%-off demo coupon (optional)
@@ -36,6 +37,7 @@ const LOCAL = readLocalReviewFile();
 const LOCAL_KEYS = {
   APPLE_REVIEW_DEMO_EMAIL: 'buyerEmail',
   APPLE_REVIEW_SELLER_EMAIL: 'sellerEmail',
+  APPLE_REVIEW_SELLER_EXPIRED_EMAIL: 'sellerExpiredEmail',
   APPLE_REVIEW_DEMO_CODE: 'code',
   APPLE_REVIEW_VIDEO_URL: 'videoUrl',
   APPLE_REVIEW_COUPON: 'coupon',
@@ -58,6 +60,8 @@ module.exports = () => {
 
   const buyerEmail = readEnv('APPLE_REVIEW_DEMO_EMAIL');
   const sellerEmail = readEnv('APPLE_REVIEW_SELLER_EMAIL');
+  const sellerExpiredEmail =
+    readEnv('APPLE_REVIEW_SELLER_EXPIRED_EMAIL') || 'sellerappreview-expired@afoma.io';
   const code = readEnv('APPLE_REVIEW_DEMO_CODE') || readEnv('APPLE_REVIEW_DEMO_PASSWORD');
   const videoUrl = readEnv('APPLE_REVIEW_VIDEO_URL');
   // Optional: a 100%-off coupon for the demo buyer so reviewers can finish an order without paying.
@@ -79,6 +83,7 @@ module.exports = () => {
   review.notes = String(review.notes || '')
     .replaceAll('{{BUYER_EMAIL}}', buyerEmail)
     .replaceAll('{{SELLER_EMAIL}}', sellerEmail)
+    .replaceAll('{{SELLER_EXPIRED_EMAIL}}', sellerExpiredEmail)
     .replaceAll('{{CODE}}', code)
     .replaceAll('{{VIDEO_URL}}', videoUrl || 'Attached in App Store Connect (App Review Information → Attachment)')
     .replaceAll(

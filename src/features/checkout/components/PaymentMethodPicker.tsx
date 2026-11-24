@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { AppText } from '../../../components/ui/AppText';
 import { colors, radius, shadows, spacing } from '../../../design-system';
+import { ApplePayMark } from './ApplePayMark';
 import type { PaymentMethodId } from './PaymentMethodOption';
 
 export interface PaymentMethodPickerItem {
@@ -10,7 +11,9 @@ export interface PaymentMethodPickerItem {
   label: string;
   subtitle?: string;
   disabled?: boolean;
-  icon: keyof typeof Ionicons.glyphMap;
+  /** When set, shows the official Apple Pay mark instead of a generic icon + text title (Guideline 4.9). */
+  useApplePayMark?: boolean;
+  icon?: keyof typeof Ionicons.glyphMap;
   external?: boolean;
 }
 
@@ -34,6 +37,7 @@ function PaymentMethodCard({
   return (
     <Pressable
       accessibilityRole="radio"
+      accessibilityLabel={method.useApplePayMark ? 'Apple Pay' : method.label}
       accessibilityState={{ selected, disabled: method.disabled }}
       disabled={method.disabled}
       onPress={onSelect}
@@ -45,18 +49,24 @@ function PaymentMethodCard({
       ]}
     >
       <View style={styles.methodHeader}>
-        <View style={styles.iconWrap}>
-          <Ionicons
-            name={method.icon}
-            size={22}
-            color={method.disabled ? colors.textMuted : colors.primary}
-          />
-        </View>
+        {!method.useApplePayMark && method.icon ? (
+          <View style={styles.iconWrap}>
+            <Ionicons
+              name={method.icon}
+              size={22}
+              color={method.disabled ? colors.textMuted : colors.primary}
+            />
+          </View>
+        ) : null}
 
         <View style={styles.copy}>
-          <AppText variant="bodyMedium" style={styles.label}>
-            {method.label}
-          </AppText>
+          {method.useApplePayMark ? (
+            <ApplePayMark height={20} decorative />
+          ) : (
+            <AppText variant="bodyMedium" style={styles.label}>
+              {method.label}
+            </AppText>
+          )}
           {method.subtitle ? (
             <AppText variant="caption" color="textSecondary" numberOfLines={2}>
               {method.subtitle}

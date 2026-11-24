@@ -45,9 +45,9 @@ export function SellerSellingStatusBanner({
       <View style={[styles.banner, styles.trial]}>
         <Ionicons name="time-outline" size={20} color={colors.warningText} />
         <View style={styles.text}>
-          <AppText variant="label">Free trial ends {formatTrialEnd(membership.trialEndsAt)}</AppText>
+          <AppText variant="label">Onboarding ends {formatTrialEnd(membership.trialEndsAt)}</AppText>
           <AppText variant="bodySmall" color="textSecondary">
-            You can have up to {membership.trialMaxActiveProducts ?? 5} active products during your trial.
+            You can have up to {membership.trialMaxActiveProducts ?? 5} active products during onboarding.
           </AppText>
         </View>
       </View>

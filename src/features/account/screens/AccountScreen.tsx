@@ -174,7 +174,7 @@ export function AccountScreen(_props: Props) {
         {
           key: 'membership',
           icon: 'membership',
-          label: 'Subscription & Plan',
+          label: 'Seller plan status',
           onPress: () => sellerId && goSeller('SellerMembership', { sellerId }),
         },
         {
@@ -317,7 +317,7 @@ export function AccountScreen(_props: Props) {
             ) : null}
             {membership ? (
               <AccountMembershipBanner
-                tierName={membership.isOnTrial ? 'Free trial' : membership.tierName}
+                tierName={membership.isOnTrial ? 'Seller onboarding' : membership.tierName}
                 subtitle={`${formatCommissionPercent(membership.commissionPercent)} commission · ${formatSellerPlanStatusLabel(
                   membership,
                 )}`}
